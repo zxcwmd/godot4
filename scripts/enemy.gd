@@ -12,7 +12,7 @@ var burn = 0.0
 var burn_timer = 0.0
 var age = 0.0
 var dead = false
-var tint = Color("e8302a")
+var tint = Color("d01018")
 var body: Node3D
 var core: MeshInstance3D
 var warning: MeshInstance3D
@@ -184,12 +184,12 @@ func _boss_attack(dir: Vector3) -> void:
 				game.notify("РЫВОК ПО ПЛОСКОСТИ — ПРЫГАЙ", tint, 1.0)
 			else:
 				_rain()
-				game.notify("ДОЖДЬ ЛЕПЕСТКОВ", tint, 1.0)
+				game.notify("КРОВАВЫЙ ДОЖДЬ", tint, 1.0)
 		2:
 			if boss_cycle % 4 == 0:
 				game.spawn_enemy(global_position + Vector3(-4, 1, 3), 0, sector)
 				game.spawn_enemy(global_position + Vector3(-4, 1, -3), 0, sector)
-				game.notify("СТРАЖИ САДА", tint, 1.0)
+				game.notify("СТРАЖИ", tint, 1.0)
 			elif boss_cycle % 2 == 0:
 				laser_t = 1.05
 				laser_angle = 0.0
@@ -204,7 +204,7 @@ func _boss_attack(dir: Vector3) -> void:
 				game.notify("КОЛЬЦО — ПРЫГАЙ", tint, 1.0)
 			elif pick == 1:
 				_pillars()
-				game.notify("СТОЛПЫ ЦВЕТКА", tint, 1.0)
+				game.notify("СТОЛПЫ КРОВИ", tint, 1.0)
 			elif pick == 2:
 				laser_t = 1.25
 				laser_angle = 0.4
@@ -274,7 +274,7 @@ func _advance_stage() -> void:
 	global_position = dest
 	game.fx.slash(dest + Vector3.UP * 2, Vector3.RIGHT, tint, 5)
 	game.world.open_boss_gate(stage - 1)
-	var titles = ["ЯВЛЕНИЕ", "ПОГОНЯ / 2D", "ШТОРМ / 3D", "КВАДРАТ ЦВЕТКА"]
+	var titles = ["ЯВЛЕНИЕ", "ПОГОНЯ / 2D", "ШТОРМ / 3D", "КЛЕТКА"]
 	game.notify("ОНО УХОДИТ — " + titles[stage], tint, 2.4)
 	attack_timer = 1.1
 	charge = 0.0

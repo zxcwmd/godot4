@@ -1,17 +1,17 @@
 class_name Forge
 extends RefCounted
-## Procedural meshes. Nothing is imported.
+## Marble, gold, blood. No imported models.
 
-const SOOT = Color("0a080c")
-const STONE = Color("241814")
-const BRONZE = Color("8a5a28")
-const BONE = Color("f4ece0")
-const IVORY = Color("faf6ee")
-const AMBER = Color("e8302a")
-const BLOOD = Color("7a1020")
-const COPPER = Color("3a8a48")
-const WAX = Color("f2c44a")
-const EMBER = Color("ff5a28")
+const SOOT = Color("080808")
+const STONE = Color("c8c2b4")
+const BRONZE = Color("e0b000")
+const BONE = Color("f2ece0")
+const IVORY = Color("fffaf0")
+const AMBER = Color("ffde00")
+const BLOOD = Color("d01018")
+const COPPER = Color("8a6a20")
+const WAX = Color("ffde00")
+const EMBER = Color("ff2a1a")
 
 static var materials = {}
 
@@ -21,8 +21,8 @@ static func mat(color: Color, glow: float = 0.0) -> StandardMaterial3D:
 		return materials[key]
 	var m = StandardMaterial3D.new()
 	m.albedo_color = color
-	m.roughness = 0.7 if glow <= 0.0 else 0.2
-	m.metallic = 0.08 if glow <= 0.0 else 0.0
+	m.roughness = 0.42 if glow <= 0.0 else 0.18
+	m.metallic = 0.35 if glow <= 0.0 else 0.0
 	if glow > 0.0:
 		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		m.emission_enabled = true
@@ -84,7 +84,17 @@ static func cyl(parent: Node3D, at: Vector3, radius: float, height: float, color
 	mesh.bottom_radius = radius
 	mesh.top_radius = radius if top < 0.0 else top
 	mesh.height = height
-	mesh.radial_segments = 12
+	mesh.radial_segments = 14
+	node.mesh = mesh
+	node.material_override = mat(color, glow)
+	parent.add_child(node)
+	node.position = at
+	return node
+
+static func prism(parent: Node3D, at: Vector3, size: Vector3, color: Color, glow: float = 0.0) -> MeshInstance3D:
+	var node = MeshInstance3D.new()
+	var mesh = PrismMesh.new()
+	mesh.size = size
 	node.mesh = mesh
 	node.material_override = mat(color, glow)
 	parent.add_child(node)

@@ -6,7 +6,7 @@ const ProjectileScript = preload("res://scripts/projectile.gd")
 const FXScript = preload("res://scripts/fx.gd")
 const AudioScript = preload("res://scripts/audio.gd")
 const HUDScript = preload("res://scripts/hud.gd")
-const SECTOR_NAMES = ["ДВЕРЬ САДА", "СДВИГ", "АЛЛЕЯ БУМАГИ", "РАЗРЫВ", "КАРМИНОВЫЙ ДВОР", "ПЕРЕГРУЗ", "ЯВЛЕНИЕ", "ПОГОНЯ", "ШТОРМ", "КВАДРАТ ЦВЕТКА"]
+const SECTOR_NAMES = ["МРАМОРНЫЙ ЗАЛ", "ТЕРМИНАЛ", "ЗОЛОТАЯ НАВЕСЬ", "ЧЁРНЫЙ СРЕЗ", "КРОВАВЫЙ ДВОР", "ПЕРЕГРУЗ", "ЯВЛЕНИЕ", "ПОГОНЯ", "ШТОРМ", "КЛЕТКА"]
 var player
 var world
 var fx
@@ -31,7 +31,7 @@ var damage_flash = 0.0
 var hit_marker = 0.0
 var transition_flash = 0.0
 var notice = ""
-var notice_color = Color("e8302a")
+var notice_color = Color("d01018")
 var zones = []
 var notice_time = 0.0
 var boss
@@ -130,7 +130,7 @@ func _physics_process(dt: float) -> void:
 			if block_enemies(i) == 0 and spawned.has(i * 2) and spawned.has(i * 2 + 1):
 				collect_seal(i)
 			elif notice_time < 0.2:
-				notify("ПЕЧАТЬ ЗАПЕРТА / УНИЧТОЖЬ ЦЕЛИ В БЛОКЕ", Color("e8302a"), 1.0)
+				notify("ПЕЧАТЬ ЗАПЕРТА / УНИЧТОЖЬ ЦЕЛИ В БЛОКЕ", Color("d01018"), 1.0)
 	if phase == "escape":
 		escape_left -= dt
 		if player.global_position.x > 676:
@@ -167,7 +167,7 @@ func enter_arena() -> void:
 	transition_flash = 0.5
 	shake = 0.5
 	activate_sector(0)
-	notify("01 / ДВЕРЬ САДА — НЕ СБАВЛЯЙ ТЕМП", world.pal.accent, 3)
+	notify("01 / МРАМОРНЫЙ ЗАЛ — НЕ СТОЙ", world.pal.accent, 3)
 	audio.play_sfx("seal", 0.7)
 
 func change_perspective() -> void:
@@ -201,7 +201,7 @@ func activate_sector(index: int) -> void:
 	spawned.append(index)
 	if index == 6:
 		boss = spawn_enemy(Vector3(423, 0.2, 0), 3, 6)
-		notify("ЦВЕТОК САДА / ЯВЛЕНИЕ", Color("e8302a"), 3)
+		notify("ДОБРОДЕТЕЛЬ / ЯВЛЕНИЕ", Color("d01018"), 3)
 		return
 	if index >= 7:
 		return
@@ -223,7 +223,7 @@ func spawn_enemy(at: Vector3, kind: int, section: int):
 	enemy.sector = section
 	add_child(enemy)
 	enemy.global_position = at
-	fx.wave(at, Color("e8302a"), 2)
+	fx.wave(at, Color("d01018"), 2)
 	return enemy
 
 func block_enemies(block: int) -> int:
@@ -262,7 +262,7 @@ func enemy_killed(enemy, weapon_name: String) -> void:
 		score += 8000
 		transition_flash = 0.6
 		shake = 0.8
-		notify("ЦВЕТОК СОРВАН / БЕГИ К ВЫХОДУ →", Color("f2c44a"), 5)
+		notify("ДОБРОДЕТЕЛЬ ПАЛА / БЕГИ К ВЫХОДУ →", Color("ffde00"), 5)
 		audio.play_sfx("seal", 0.65)
 
 func spawn_projectile(at: Vector3, velocity: Vector3, damage: float, friendly: bool, color: Color, blast: float = 0, status: String = "", weapon_name: String = "", style: String = "orb", ricochets: int = 0, gravity: float = 0.0) -> void:
@@ -356,7 +356,7 @@ func explode(at: Vector3, radius: float, damage: float, color: Color, status: St
 			enemy.take_damage(damage, delta.normalized() * 12, status, weapon_name)
 			fx.beam(at, enemy.global_position + Vector3.UP, color, 0.06, 0.2)
 
-func notify(text: String, color: Color = Color("e8302a"), duration: float = 2.0) -> void:
+func notify(text: String, color: Color = Color("d01018"), duration: float = 2.0) -> void:
 	notice = text
 	notice_color = color
 	notice_time = duration

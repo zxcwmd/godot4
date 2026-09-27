@@ -2,16 +2,16 @@ class_name Forge
 extends RefCounted
 ## Shared procedural geometry. No external models or textures are required.
 
-const SOOT = Color("1a120c")
-const STONE = Color("3a2e24")
-const BRONZE = Color("8a5a32")
-const BONE = Color("e4d2b0")
-const IVORY = Color("f3ead8")
-const AMBER = Color("d4a056")
-const BLOOD = Color("9a2a32")
-const COPPER = Color("6b8f72")
-const WAX = Color("c9a66b")
-const EMBER = Color("e25b2a")
+const SOOT = Color("071014")
+const STONE = Color("1e3942")
+const BRONZE = Color("2f8f7a")
+const BONE = Color("e8f4ef")
+const IVORY = Color("f4fbf7")
+const AMBER = Color("7dffc3")
+const BLOOD = Color("ff6a4a")
+const COPPER = Color("4ad4ff")
+const WAX = Color("ffd08a")
+const EMBER = Color("ff7a45")
 
 static var materials = {}
 
@@ -21,8 +21,8 @@ static func mat(color: Color, glow: float = 0.0) -> StandardMaterial3D:
 		return materials[key]
 	var m = StandardMaterial3D.new()
 	m.albedo_color = color
-	m.roughness = 0.62 if glow <= 0.0 else 0.35
-	m.metallic = 0.18 if glow <= 0.0 else 0.0
+	m.roughness = 0.58 if glow <= 0.0 else 0.22
+	m.metallic = 0.32 if glow <= 0.0 else 0.0
 	if glow > 0.0:
 		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		m.emission_enabled = true

@@ -459,7 +459,8 @@ func _physics_process(dt: float) -> void:
 	move_and_slide()
 	if side_mode:
 		global_position.z = 0
-	global_position.z = clampf(global_position.z, -9, 9)
+	var zlim = 22.0 if game.sector >= 9 else 9.0
+	global_position.z = clampf(global_position.z, -zlim, zlim)
 	if game.phase == "hub" and global_position.y < -5:
 		game.enter_arena()
 	elif global_position.y < -20:
@@ -473,7 +474,10 @@ func _physics_process(dt: float) -> void:
 	if avatar.has_method("animate"):
 		avatar.animate(dt, velocity, is_on_floor(), class_id == 0 and Input.is_action_pressed("attack"), 0.0, false, not is_on_floor() or comet)
 	if not reduced_motion:
-		camera.fov = lerpf(camera.fov, 104 if dash_time > 0 else 92, dt * 8)
+		var fov_target = 104 if dash_time > 0 else 92
+		if game.trans_t >= 0:
+			fov_target = 92 + sin(clampf(game.trans_t, 0, 1) * PI) * 28
+		camera.fov = lerpf(camera.fov, fov_target, dt * 8)
 		camera.position = Vector3(randf_range(-1, 1) * game.shake * 0.06, 1.55 + sin(walk_clock * 1.6) * 0.035, 0)
 		camera.rotation.z = lerpf(camera.rotation.z, -input.x * 0.025, dt * 8)
 		viewmodel.position = Vector3(sin(walk_clock * 0.8) * 0.012, sin(walk_clock * 1.6) * 0.016 - recoil * 0.08, recoil * 0.09)
@@ -536,8 +540,8 @@ func melee(alt: bool) -> void:
 		hp = minf(100, hp + 1.8 * hit_count)
 	if avatar.has_method("strike"):
 		avatar.strike()
-	game.fx.crescent(muzzle(), aim, Forge.AMBER if weapon != 3 else Forge.EMBER, reach * 0.55)
-	game.fx.flash(muzzle() + aim * 0.4, Forge.WAX, 0.12)
+	game.fx.slash(muzzle(), aim, Forge.AMBER if weapon != 3 else Forge.EMBER, reach * 0.7)
+	game.fx.flash(muzzle() + aim * 0.4, Forge.WAX, 0.1)
 	if weapon == 4 or alt:
 		game.fx.wave(global_position + Vector3.UP * 0.2, Forge.AMBER, reach)
 	game.audio.play_sfx("slash", 1.5 if weapon == 3 else 1)
@@ -653,7 +657,7 @@ func _spell_pillars(spell: Array) -> void:
 		game.spawn_zone(enemy.global_position, 2.2, 2.8, 14, "burn", Forge.EMBER)
 
 func _spell_breath(spell: Array) -> void:
-	game.fx.crescent(muzzle(), aim, Forge.EMBER, spell[2] * 0.55)
+	game.fx.slash(muzzle(), aim, Forge.EMBER, spell[2] * 0.7)
 	for i in range(7):
 		var spread = aim.rotated(Vector3.UP if not side_mode else Vector3.FORWARD, (i - 3) * 0.12)
 		game.fx.beam(muzzle(), muzzle() + spread * spell[2], Forge.EMBER, 0.09, 0.22)

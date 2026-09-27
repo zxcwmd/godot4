@@ -6,7 +6,7 @@ const ProjectileScript = preload("res://scripts/projectile.gd")
 const FXScript = preload("res://scripts/fx.gd")
 const AudioScript = preload("res://scripts/audio.gd")
 const HUDScript = preload("res://scripts/hud.gd")
-const SECTOR_NAMES = ["ДВЕРЬ ПРАХА", "СДВИГ", "КОСТНЫЙ НЕФ", "РАЗРЫВ", "БАГРОВЫЙ ПРИДЕЛ", "ПЕРЕГРУЗ", "СЕРДЦЕ УСЫПАЛЬНИЦЫ"]
+const SECTOR_NAMES = ["ДВЕРЬ МЕЛА", "СДВИГ", "СВЕТОВОЙ НЕФ", "РАЗРЫВ", "КОРАЛЛОВАЯ ШТОЛЬНЯ", "ПЕРЕГРУЗ", "ЯВЛЕНИЕ", "ПОГОНЯ", "ШТОРМ", "КВАДРАТ ЯДРА"]
 var player
 var world
 var fx
@@ -31,13 +31,18 @@ var damage_flash = 0.0
 var hit_marker = 0.0
 var transition_flash = 0.0
 var notice = ""
-var notice_color = Color("d4a056")
+var notice_color = Color("7dffc3")
 var zones = []
 var notice_time = 0.0
 var boss
 var won = false
 var save_records = true
 var muted = false
+var cinematic = true
+var trans_t = -1.0
+var trans_to_side = false
+var trans_committed = false
+var trans_dur = 0.85
 
 func _ready() -> void:
 	randomize()
@@ -92,6 +97,10 @@ func controlling() -> bool:
 func _physics_process(dt: float) -> void:
 	if not is_instance_valid(player): return
 	if player.side_mode:
+		var zoom = 21.0
+		if trans_t >= 0.5 and trans_to_side:
+			zoom = lerpf(32.0, 21.0, clampf((trans_t - 0.5) / 0.5, 0, 1))
+		side_camera.size = zoom
 		var target = Vector3(player.global_position.x+3.0, maxf(8.0, player.global_position.y+6), 26)
 		side_camera.global_position = side_camera.global_position.lerp(target, minf(1, dt*8))
 		side_camera.look_at(Vector3(side_camera.global_position.x, side_camera.global_position.y-5.0, 0))
@@ -101,7 +110,7 @@ func _physics_process(dt: float) -> void:
 	if combo_time <= 0 and combo > 0:
 		combo = maxi(0, combo-1)
 		combo_time = 0.7
-	var current = clampi(int(player.global_position.x / 65.0), 0, 6)
+	var current = clampi(int(player.global_position.x / 65.0), 0, 9)
 	if current != sector:
 		sector = current
 		change_perspective()
@@ -117,7 +126,7 @@ func _physics_process(dt: float) -> void:
 				notify("ПЕЧАТЬ ЗАПЕРТА / УНИЧТОЖЬ ЦЕЛИ В БЛОКЕ", Color("e25b2a"), 1.0)
 	if phase == "escape":
 		escape_left -= dt
-		if player.global_position.x > 533:
+		if player.global_position.x > 676:
 			finish(true)
 		elif escape_left <= 0:
 			finish(false)
@@ -128,6 +137,13 @@ func _process(dt: float) -> void:
 	hit_marker = maxf(0, hit_marker-dt)
 	transition_flash = maxf(0, transition_flash-dt)
 	notice_time = maxf(0, notice_time-dt)
+	if trans_t >= 0.0:
+		trans_t += dt / trans_dur
+		if trans_t >= 0.48 and not trans_committed:
+			trans_committed = true
+			_commit_perspective(trans_to_side)
+		if trans_t >= 1.0:
+			trans_t = -1.0
 
 func enter_arena() -> void:
 	phase = "run"
@@ -140,29 +156,46 @@ func enter_arena() -> void:
 	player.invincible = 1.5
 	player.set_side(false)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	world.apply_palette(false, 0)
 	transition_flash = 0.5
 	shake = 0.5
 	activate_sector(0)
-	notify("01 / ДВЕРЬ ПРАХА — НЕ СБАВЛЯЙ ТЕМП", Color("d4a056"), 3)
+	notify("01 / ДВЕРЬ МЕЛА — НЕ СБАВЛЯЙ ТЕМП", world.pal.accent, 3)
 	audio.play_sfx("seal", 0.7)
 
 func change_perspective() -> void:
-	var side = sector % 2 == 1
-	if side != player.side_mode:
-		if side:
-			side_camera.global_position = Vector3(player.global_position.x+3, 8, 26)
-			side_camera.look_at(Vector3(player.global_position.x+3, 3, 0))
-		player.set_side(side)
-		transition_flash = 0.4
-		audio.play_sfx("dash", 0.6)
-	notify(("2D / " if side else "3D / ") + SECTOR_NAMES[sector], Color("d4a056"), 2)
+	var side = world.side_sector(sector)
+	if side == player.side_mode:
+		world.apply_palette(side, sector)
+		notify(("2D / " if side else "3D / ") + SECTOR_NAMES[sector], world.pal.accent, 2)
+		return
+	if cinematic and not player.reduced_motion:
+		trans_to_side = side
+		trans_t = 0.0
+		trans_committed = false
+		audio.play_sfx("seal", 0.85)
+	else:
+		_commit_perspective(side)
+
+func _commit_perspective(side: bool) -> void:
+	if side:
+		side_camera.size = 28
+		side_camera.global_position = Vector3(player.global_position.x+3, 8, 26)
+		side_camera.look_at(Vector3(player.global_position.x+3, 3, 0))
+	player.set_side(side)
+	world.apply_palette(side, sector)
+	transition_flash = 0.25
+	audio.play_sfx("dash", 0.6)
+	notify(("2D / " if side else "3D / ") + SECTOR_NAMES[sector], world.pal.accent, 2)
 
 func activate_sector(index: int) -> void:
 	if spawned.has(index): return
 	spawned.append(index)
 	if index == 6:
 		boss = spawn_enemy(Vector3(423, 0.2, 0), 3, 6)
-		notify("СЕРДЦЕ УСЫПАЛЬНИЦЫ / ПОСЛЕДНИЙ ТАКТ", Color("9a2a32"), 3)
+		notify("ЯДРО ПРИЛИВА / ЯВЛЕНИЕ", Color("ff7a45"), 3)
+		return
+	if index >= 7:
 		return
 	var count = 7 + index
 	for i in range(count):
@@ -180,7 +213,7 @@ func spawn_enemy(at: Vector3, kind: int, section: int):
 	enemy.sector = section
 	add_child(enemy)
 	enemy.global_position = at
-	fx.wave(at, Color("9a2a32"), 2)
+	fx.wave(at, Color("ff6a4a"), 2)
 	return enemy
 
 func block_enemies(block: int) -> int:
@@ -219,7 +252,7 @@ func enemy_killed(enemy, weapon_name: String) -> void:
 		score += 8000
 		transition_flash = 0.6
 		shake = 0.8
-		notify("СЕРДЦЕ ОСТАНОВЛЕНО / БЕГИ К ВЫХОДУ →", Color("d4a056"), 5)
+		notify("ЯДРО РАЗБИТО / БЕГИ К ВЫХОДУ →", Color("7dffc3"), 5)
 		audio.play_sfx("seal", 0.65)
 
 func spawn_projectile(at: Vector3, velocity: Vector3, damage: float, friendly: bool, color: Color, blast: float = 0, status: String = "", weapon_name: String = "", style: String = "orb", ricochets: int = 0, gravity: float = 0.0) -> void:
@@ -309,7 +342,7 @@ func explode(at: Vector3, radius: float, damage: float, color: Color, status: St
 			enemy.take_damage(damage, delta.normalized()*12, status, weapon_name)
 			fx.beam(at, enemy.global_position+Vector3.UP, color, 0.06, 0.2)
 
-func notify(text: String, color: Color = Color("d4a056"), duration: float = 2.0) -> void:
+func notify(text: String, color: Color = Color("7dffc3"), duration: float = 2.0) -> void:
 	notice = text
 	notice_color = color
 	notice_time = duration

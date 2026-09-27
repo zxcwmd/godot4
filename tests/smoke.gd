@@ -34,6 +34,7 @@ func run() -> void:
 	var scene = load("res://scenes/main.tscn")
 	game = scene.instantiate()
 	game.save_records = false
+	game.cinematic = false
 	root.add_child(game)
 	current_scene = game
 	await settle()
@@ -146,10 +147,12 @@ func run() -> void:
 		game.player.global_position = Vector3(block*130+7, 1, 0)
 		await settle()
 		check(not game.player.side_mode, "first-person sector %d" % (block*2))
+		var pal_3d = game.world.pal.accent
 		await clear_enemies()
 		game.player.global_position = Vector3(block*130+70, 1, 0)
 		await settle()
 		check(game.player.side_mode, "side-on sector %d" % (block*2+1))
+		check(game.world.side_look and game.world.pal.accent != pal_3d, "2D shift recolors the location %d" % block)
 		check(absf(game.player.global_position.z) < 0.001, "side movement constrained to plane")
 		game.player.global_position = Vector3(122+block*130, 1, 0)
 		await settle()
@@ -177,11 +180,21 @@ func run() -> void:
 	game.boss.attack_timer = 0
 	await settle()
 	check(game.boss.charge > 0, "boss telegraphs jumpable shockwave")
+	game.boss.take_damage(game.boss.max_hp * 0.30, Vector3.ZERO, "", "SMOKE")
+	await settle()
+	check(game.boss.stage == 1 and game.boss.sector == 7, "wounded boss flees into the 2D chase")
+	check(game.world.boss_gates.size() == 3 and not game.world.boss_gates[0].visible, "first chase gate opens")
+	game.boss.take_damage(game.boss.max_hp * 0.30, Vector3.ZERO, "", "SMOKE")
+	await settle()
+	check(game.boss.stage == 2 and game.boss.sector == 8, "boss returns to a 3D storm hall")
+	game.boss.take_damage(game.boss.max_hp * 0.30, Vector3.ZERO, "", "SMOKE")
+	await settle()
+	check(game.boss.stage == 3 and game.boss.sector == 9, "final stage is the square core room")
 	game.boss.take_damage(10000, Vector3.ZERO, "", "SMOKE")
 	await settle()
 	check(game.phase == "escape", "boss death starts timed extraction")
 	check(not game.world.exit_gate.visible, "evacuation gate unlocks")
-	game.player.global_position = Vector3(535, 0, 0)
+	game.player.global_position = Vector3(680, 0, 0)
 	await settle()
 	check(game.phase == "end" and game.won, "reaching exit wins the level")
 	check(game.hud.menu == "end", "results screen opens")

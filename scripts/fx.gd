@@ -1,5 +1,5 @@
 extends Node3D
-## Short-lived pooled-by-lifetime meshes. Always capped by the caller.
+## Short-lived meshes plus CPU particle slashes. Always capped by the caller.
 var pieces = []
 
 func burst(at: Vector3, color: Color, count: int = 10, power: float = 6.0) -> void:
@@ -35,20 +35,76 @@ func column(at: Vector3, color: Color, height: float = 6.0) -> void:
 	var mesh = Forge.cyl(self, at + Vector3(0, height * 0.5, 0), 0.18, height, color, 1.0, 0.04)
 	pieces.append({"node": mesh, "velocity": Vector3.ZERO, "life": 0.45, "max": 0.45, "type": 3})
 
-func crescent(origin: Vector3, forward: Vector3, color: Color, radius: float = 3.2) -> void:
+func slash(origin: Vector3, forward: Vector3, color: Color, radius: float = 3.2) -> void:
+	if pieces.size() > 150:
+		return
+	forward = Vector3(forward.x, forward.y * 0.35, forward.z)
+	if forward.length() < 0.01:
+		forward = Vector3.RIGHT
+	forward = forward.normalized()
 	var up = Vector3.UP
-	if absf(forward.dot(up)) > 0.95:
+	if absf(forward.dot(up)) > 0.92:
 		up = Vector3.RIGHT
 	var right = forward.cross(up).normalized()
 	if right.length() < 0.1:
 		return
-	var prev = origin
-	for i in range(7):
-		var a = -0.85 + float(i) * 0.28
-		var p = origin + (forward * cos(a) + right * sin(a)) * radius
-		if i > 0:
-			beam(prev, p, color, 0.07, 0.18)
-		prev = p
+	var pts := PackedVector3Array()
+	for i in range(16):
+		var a = -1.05 + float(i) * 0.14
+		pts.append((forward * cos(a) + right * sin(a)) * radius)
+	var dust = _emitter(origin, color, 42, 0.3)
+	dust.emission_shape = CPUParticles3D.EMISSION_SHAPE_POINTS
+	dust.emission_points = pts
+	dust.direction = forward
+	dust.spread = 28.0
+	dust.initial_velocity_min = 8.0
+	dust.initial_velocity_max = 18.0
+	dust.gravity = Vector3(0, 7, 0)
+	dust.scale_amount_min = 0.04
+	dust.scale_amount_max = 0.14
+	var streak = BoxMesh.new()
+	streak.size = Vector3(0.035, 0.035, 0.32)
+	dust.mesh = streak
+	dust.restart()
+	dust.emitting = true
+	pieces.append({"node": dust, "velocity": Vector3.ZERO, "life": 0.42, "max": 0.42, "type": 4})
+	var sparks = _emitter(origin + forward * 0.4, color, 22, 0.22)
+	sparks.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	sparks.emission_sphere_radius = 0.18
+	sparks.direction = forward
+	sparks.spread = 70.0
+	sparks.initial_velocity_min = 4.0
+	sparks.initial_velocity_max = 11.0
+	sparks.gravity = Vector3(0, -2, 0)
+	sparks.scale_amount_min = 0.05
+	sparks.scale_amount_max = 0.11
+	var pebble = SphereMesh.new()
+	pebble.radius = 0.05
+	pebble.height = 0.1
+	pebble.radial_segments = 6
+	pebble.rings = 3
+	sparks.mesh = pebble
+	sparks.restart()
+	sparks.emitting = true
+	pieces.append({"node": sparks, "velocity": Vector3.ZERO, "life": 0.36, "max": 0.36, "type": 4})
+
+func crescent(origin: Vector3, forward: Vector3, color: Color, radius: float = 3.2) -> void:
+	slash(origin, forward, color, radius)
+
+func _emitter(at: Vector3, color: Color, amount: int, life: float) -> CPUParticles3D:
+	var p = CPUParticles3D.new()
+	add_child(p)
+	p.global_position = at
+	p.amount = amount
+	p.lifetime = life
+	p.one_shot = true
+	p.explosiveness = 0.94
+	p.local_coords = true
+	p.color = color
+	p.damping_min = 1.5
+	p.damping_max = 5.0
+	p.material_override = Forge.mat(color, 1.5)
+	return p
 
 func _process(dt: float) -> void:
 	for i in range(pieces.size() - 1, -1, -1):
@@ -68,7 +124,7 @@ func _process(dt: float) -> void:
 			p.node.scale.y = p.life / p.max
 		elif p.type == 2:
 			p.node.scale = Vector3.ONE * (1.0 + (1.0 - p.life / p.max) * p.velocity.x)
-		else:
+		elif p.type == 3:
 			p.node.scale.y = maxf(0.05, p.life / p.max)
 			p.node.scale.x = 1.2 - p.life / p.max * 0.4
 			p.node.scale.z = p.node.scale.x

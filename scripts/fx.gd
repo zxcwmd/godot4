@@ -23,6 +23,33 @@ func wave(at: Vector3, color: Color, radius: float = 6.0) -> void:
 	var mesh = Forge.ring(self, at, 1.0, color, 0.05)
 	pieces.append({"node": mesh, "velocity": Vector3.ONE * radius, "life": 0.4, "max": 0.4, "type": 2})
 
+func flash(at: Vector3, color: Color, size: float = 0.22) -> void:
+	if pieces.size() > 170:
+		return
+	var mesh = Forge.orb(self, at, size, color, 1.4)
+	pieces.append({"node": mesh, "velocity": Vector3.ZERO, "life": 0.08, "max": 0.08, "type": 1})
+
+func column(at: Vector3, color: Color, height: float = 6.0) -> void:
+	if pieces.size() > 170:
+		return
+	var mesh = Forge.cyl(self, at + Vector3(0, height * 0.5, 0), 0.18, height, color, 1.0, 0.04)
+	pieces.append({"node": mesh, "velocity": Vector3.ZERO, "life": 0.45, "max": 0.45, "type": 3})
+
+func crescent(origin: Vector3, forward: Vector3, color: Color, radius: float = 3.2) -> void:
+	var up = Vector3.UP
+	if absf(forward.dot(up)) > 0.95:
+		up = Vector3.RIGHT
+	var right = forward.cross(up).normalized()
+	if right.length() < 0.1:
+		return
+	var prev = origin
+	for i in range(7):
+		var a = -0.85 + float(i) * 0.28
+		var p = origin + (forward * cos(a) + right * sin(a)) * radius
+		if i > 0:
+			beam(prev, p, color, 0.07, 0.18)
+		prev = p
+
 func _process(dt: float) -> void:
 	for i in range(pieces.size() - 1, -1, -1):
 		var p = pieces[i]
@@ -39,5 +66,9 @@ func _process(dt: float) -> void:
 		elif p.type == 1:
 			p.node.scale.x = p.life / p.max
 			p.node.scale.y = p.life / p.max
-		else:
+		elif p.type == 2:
 			p.node.scale = Vector3.ONE * (1.0 + (1.0 - p.life / p.max) * p.velocity.x)
+		else:
+			p.node.scale.y = maxf(0.05, p.life / p.max)
+			p.node.scale.x = 1.2 - p.life / p.max * 0.4
+			p.node.scale.z = p.node.scale.x

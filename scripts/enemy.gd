@@ -19,6 +19,7 @@ var warning: MeshInstance3D
 var charge = 0.0
 var boss_cycle = 0
 var flash = 0.0
+var lift = 0.0
 
 func _ready() -> void:
 	add_to_group("enemies")
@@ -35,13 +36,13 @@ func _ready() -> void:
 	add_child(body)
 	match kind:
 		0:
-			hp = 65; speed = 6.8; tint = Color("ff608c")
+			hp = 65; speed = 6.8; tint = Forge.BLOOD
 		1:
-			hp = 85; speed = 3.6; tint = Color("ffc16b")
+			hp = 85; speed = 3.6; tint = Forge.WAX
 		2:
-			hp = 170; speed = 3.0; tint = Color("c789ff")
+			hp = 170; speed = 3.0; tint = Forge.COPPER
 		3:
-			hp = 2300; speed = 1.8; tint = Color("ff4968")
+			hp = 2300; speed = 1.8; tint = Forge.EMBER
 	max_hp = hp
 	if kind == 3:
 		core = Forge.orb(body, Vector3(0, 2.5, 0), 1.25, tint)
@@ -49,17 +50,18 @@ func _ready() -> void:
 			var ring = Forge.ring(body, Vector3(0, 2.5, 0), 2.1+i*0.2, tint, 0.1)
 			ring.rotation = Vector3(i*0.9, 0, i*0.7)
 		for x in [-1.9, 1.9]:
-			Forge.box(body, Vector3(x, 2.3, 0), Vector3(0.6, 2.8, 0.8), Color("3b2339"))
+			Forge.box(body, Vector3(x, 2.3, 0), Vector3(0.6, 2.8, 0.8), Forge.STONE)
+		Forge.cyl(body, Vector3(0, 1.1, 0), 1.1, 2.2, Forge.BRONZE)
 	else:
 		var size = 1.35 if kind == 2 else 1.0
-		Forge.box(body, Vector3(0, 1.05, 0) * size, Vector3(0.85, 0.85, 0.5) * size, Color("354459"))
-		Forge.box(body, Vector3(0, 1.65, 0) * size, Vector3(0.6, 0.4, 0.5) * size, Color("1b2431"))
+		Forge.box(body, Vector3(0, 1.05, 0) * size, Vector3(0.85, 0.85, 0.5) * size, Forge.STONE)
+		Forge.cyl(body, Vector3(0, 1.62, 0) * size, 0.22 * size, 0.4 * size, Forge.BONE)
 		core = Forge.box(body, Vector3(0, 1.68, 0.27) * size, Vector3(0.52, 0.12, 0.06) * size, tint, 1)
 		for x in [-0.52, 0.52]:
 			Forge.box(body, Vector3(x, 0.98, 0) * size, Vector3(0.2, 0.9, 0.28) * size, tint)
-			Forge.box(body, Vector3(x*0.5, 0.35, 0) * size, Vector3(0.25, 0.7, 0.32) * size, Color("2b394d"))
+			Forge.box(body, Vector3(x*0.5, 0.35, 0) * size, Vector3(0.25, 0.7, 0.32) * size, Forge.BRONZE)
 		if kind == 1:
-			Forge.box(body, Vector3(0.55, 1.1, 0.55), Vector3(0.32, 0.32, 1.1), Color("ffc16b"), 1)
+			Forge.cyl(body, Vector3(0.55, 1.1, 0.35), 0.08, 1.0, Forge.WAX, 0.6)
 	warning = Forge.ring(self, Vector3(0, 0.08, 0), 1.0, tint, 0.04)
 	warning.visible = false
 
@@ -70,7 +72,15 @@ func _physics_process(dt: float) -> void:
 	attack_timer -= dt
 	frozen = maxf(0, frozen-dt)
 	flash = maxf(0, flash-dt)
-	core.material_override = Forge.mat(Color.WHITE if flash > 0 else (Color("71eaff") if frozen > 0 else tint), 1)
+	core.material_override = Forge.mat(Color.WHITE if flash > 0 else (Forge.BONE if frozen > 0 else tint), 1)
+	if lift > 0:
+		lift -= dt
+		velocity.y = 12
+		if lift <= 0:
+			take_damage(42, Vector3.DOWN * 16, "", "НЕБОПОГРЕБЕНИЕ")
+			if dead:
+				return
+			game.fx.burst(global_position, Forge.BONE, 12, 7)
 	if burn > 0:
 		burn -= dt
 		burn_timer -= dt
@@ -108,7 +118,10 @@ func _physics_process(dt: float) -> void:
 			game.shake = 0.3
 	velocity.x = movement.x + stagger.x
 	velocity.z = movement.z + stagger.z
-	velocity.y -= 24 * dt
+	if lift > 0:
+		velocity.y = 12
+	else:
+		velocity.y -= 24 * dt
 	stagger = stagger.move_toward(Vector3.ZERO, dt*20)
 	if is_on_wall() and is_on_floor(): velocity.y = 8.5
 	move_and_slide()

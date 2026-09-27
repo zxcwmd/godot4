@@ -1,13 +1,13 @@
 extends CanvasLayer
 ## Responsive vector HUD and menus. All UI strings are Russian.
-const INK = Color("080e17")
-const PANEL = Color("101b28")
-const LINE = Color("2a3b4a")
-const TEXT = Color("e9efe9")
-const MUTED = Color("8a9eac")
-const LIME = Color("d4ff64")
-const CYAN = Color("64e3fa")
-const PINK = Color("ff608c")
+const INK = Color("140e0a")
+const PANEL = Color("241810")
+const LINE = Color("5a4630")
+const TEXT = Color("f3ead8")
+const MUTED = Color("a89070")
+const LIME = Color("d4a056")
+const CYAN = Color("6b8f72")
+const PINK = Color("9a2a32")
 var game
 var canvas: Control
 var controls: Control
@@ -179,14 +179,14 @@ func draw_screen() -> void:
 	draw_game()
 
 func background() -> void:
-	canvas.draw_rect(Rect2(0, 0, 1440, 900), Color(0.018, 0.035, 0.055, 0.96))
-	for x in range(0, 1440, 60): line(Vector2(x, 0), Vector2(x, 900), Color("101e2b"))
-	for y in range(0, 900, 60): line(Vector2(0, y), Vector2(1440, y), Color("101e2b"))
-	line(Vector2(48, 75), Vector2(1392, 75))
-	line(Vector2(48, 849), Vector2(1392, 849))
-	text(Vector2(48, 52), "ZB / НЕЙРОДВИГАТЕЛЬ", 17, LIME, true)
+	canvas.draw_rect(Rect2(0, 0, 1440, 900), Color(0.08, 0.045, 0.03, 0.96))
+	canvas.draw_rect(Rect2(36, 36, 1368, 828), Color(0, 0, 0, 0), false, 2)
+	canvas.draw_rect(Rect2(44, 44, 1352, 812), LINE, false, 1)
+	line(Vector2(48, 75), Vector2(1392, 75), LIME)
+	line(Vector2(48, 849), Vector2(1392, 849), LIME)
+	text(Vector2(48, 52), "ZB / ЯНТАРНАЯ УСЫПАЛЬНИЦА", 17, LIME, true)
 	text(Vector2(1105, 52), "ОДИН УРОВЕНЬ. НОЛЬ ПОКОЯ.", 14, MUTED)
-	text(Vector2(48, 878), "ZERO BEAT   /   ПРОТОКОЛ 001", 13, MUTED)
+	text(Vector2(48, 878), "ZERO BEAT   /   ОБРЯД 001", 13, MUTED)
 	text(Vector2(1165, 878), "GODOT 4  /  186 BPM", 13, MUTED)
 
 func draw_hub() -> void:
@@ -195,20 +195,21 @@ func draw_hub() -> void:
 	text(Vector2(42, 224), "НУЛЕВОЙ", 101, TEXT, true)
 	text(Vector2(42, 324), "ТАКТ", 101, LIME, true)
 	canvas.draw_rect(Rect2(49, 347, 43, 4), LIME)
-	text(Vector2(111, 357), "РАЗОРВИ ЦИКЛ. ЗАСТАВЬ МАШИНУ ЗАМОЛЧАТЬ.", 18, TEXT)
+	text(Vector2(111, 357), "РАЗОРВИ ЦИКЛ. ВЫРВИ СЕРДЦЕ УСЫПАЛЬНИЦЫ.", 18, TEXT)
 	text(Vector2(48, 393), "Три печати. Одно Сердце. Прорыв через 3D и 2D под ломаный бит.", 19, MUTED)
-	# Technical reactor illustration: clean vector rings, broken arcs, orbital nodes.
+	# Rose-window / solar disc — ossuary, not a reactor.
 	var c = Vector2(1140, 252)
-	for i in range(4):
-		canvas.draw_arc(c, 67+i*31, clock*0.08*(1 if i%2==0 else -1)+i, clock*0.08*(1 if i%2==0 else -1)+i+4.9, 64, LIME if i==1 else LINE, 2 if i==1 else 1, true)
-	for i in range(32):
-		var angle = i*TAU/32
+	for i in range(5):
+		canvas.draw_arc(c, 52+i*28, clock*0.06*(1 if i%2==0 else -1), clock*0.06*(1 if i%2==0 else -1)+TAU, 64, LIME if i==2 else LINE, 2 if i==2 else 1, true)
+	for i in range(16):
+		var angle = i*TAU/16.0 + clock*0.04
 		var v = Vector2(cos(angle), sin(angle))
-		line(c+v*171, c+v*(181 if i%4 == 0 else 176), MUTED if i%4==0 else LINE)
-	var points = PackedVector2Array([c+Vector2(10,-69), c+Vector2(-48,11), c+Vector2(-5,11), c+Vector2(-16,75), c+Vector2(50,-14), c+Vector2(11,-14)])
-	canvas.draw_colored_polygon(points, LIME)
-	line(c+Vector2(-203,0), c+Vector2(-160,0), LIME)
-	line(c+Vector2(160,0), c+Vector2(203,0), LIME)
+		line(c+v*48, c+v*168, MUTED if i%2==0 else LINE, 1.5 if i%2==0 else 1)
+	for i in range(8):
+		var a = i*TAU/8.0 + clock*0.1
+		canvas.draw_colored_polygon(PackedVector2Array([c, c+Vector2(cos(a),sin(a))*36, c+Vector2(cos(a+0.35),sin(a+0.35))*36]), Color(LIME, 0.55))
+	canvas.draw_circle(c, 18, LIME)
+	canvas.draw_circle(c, 10, INK)
 	text(Vector2(1270, 404), "[ 186.00 ]", 15, LIME)
 	text(Vector2(48, 429), "01  /  ВЫБЕРИ ОБОЛОЧКУ", 15, MUTED, true)
 	for i in range(3): draw_class_card(i)
@@ -237,12 +238,12 @@ func draw_class_card(index: int) -> void:
 	else:
 		for i in range(3):
 			var at = c+Vector2(cos(i*TAU/3-PI/2), sin(i*TAU/3-PI/2))*22
-			canvas.draw_circle(at, 7, [Color("ff9869"), CYAN, Color("c58dff")][i])
+			canvas.draw_circle(at, 7, [Color("e25b2a"), Color("e4d2b0"), Color("d4a056")][i])
 	line(Vector2(x+22, 550), Vector2(x+416, 550))
 	var details = [
 		["Катана · серпы · рапира", "Руки-бензопилы · коса", "БЛИЖЕ К ЦЕЛИ. ВЫШЕ ТЕМП."],
-		["Револьвер · метательные диски", "Рельсотрон · дробовик", "ТОЧНОСТЬ. РИКОШЕТ. ПРОБОЙ."],
-		["Огонь + лёд + молния", "3 сферы → 10 заклинаний", "СОБЕРИ СОБСТВЕННЫЙ ХАОС."]
+		["Револьвер · диски · рельс · дробовик", "Арбалет · гвоздомёт · гарпун · кадило", "ВОСЕМЬ СТВОЛОВ. НИ ОДНОГО ПАТРОНА."],
+		["Огонь + лёд + молния", "10 уникальных обрядов", "КАЖДАЯ ТРОИЦА — СВОЙ РИТУАЛ."]
 	]
 	text(Vector2(x+22, 582), details[index][0], 18, TEXT)
 	text(Vector2(x+22, 611), details[index][1], 18, TEXT)
@@ -343,7 +344,7 @@ func draw_game() -> void:
 		canvas.draw_rect(Rect2(650, 826, 140*(1-p.dash_cooldown/0.85), 3), LIME)
 	centered(887, "WASD / ДВИЖЕНИЕ     ПРОБЕЛ / ДВОЙНОЙ ПРЫЖОК     ЛКМ / АТАКА     ПКМ / ОСОБАЯ     TAB / ПОМОЩЬ     ESC / ПАУЗА", 12, MUTED)
 	if is_instance_valid(game.boss) and not game.boss.dead:
-		centered(207, "С Е Р Д Ц Е   М А Ш И Н Ы", 17, PINK, true)
+		centered(207, "С Е Р Д Ц Е   У С Ы П А Л Ь Н И Ц Ы", 17, PINK, true)
 		canvas.draw_rect(Rect2(460, 221, 520, 5), LINE)
 		canvas.draw_rect(Rect2(460, 221, 520*game.boss.hp/game.boss.max_hp, 5), PINK)
 	if game.phase == "escape":
@@ -352,14 +353,14 @@ func draw_game() -> void:
 		var a = game.damage_flash*(0.25 if p.reduced_motion else 0.55)
 		canvas.draw_rect(Rect2(0,0,1440,900), Color(0.8,0.04,0.15,a), false, 18)
 	if game.transition_flash > 0 and not p.reduced_motion:
-		canvas.draw_rect(Rect2(0,0,1440,900), Color(0.4,0.9,1,game.transition_flash*0.25))
+		canvas.draw_rect(Rect2(0,0,1440,900), Color(0.82,0.55,0.18,game.transition_flash*0.22))
 		for i in range(8):
-			canvas.draw_rect(Rect2(0, posmod(int(clock*1800)+i*127,900), 1440, 2), Color(0.6,1,0.8,game.transition_flash*0.7))
+			canvas.draw_rect(Rect2(0, posmod(int(clock*1800)+i*127,900), 1440, 2), Color(0.9,0.7,0.3,game.transition_flash*0.7))
 
 func draw_pause() -> void:
 	background()
 	text(Vector2(80, 185), "ПАУЗА", 72, TEXT, true)
-	text(Vector2(83, 231), "МАШИНА ПОДОЖДЁТ.", 20, LIME)
+	text(Vector2(83, 231), "УСЫПАЛЬНИЦА ПОДОЖДЁТ.", 20, LIME)
 	text(Vector2(80, 598), "МУЗЫКА", 17, MUTED)
 	text(Vector2(80, 646), "МЫШЬ", 17, MUTED)
 	text(Vector2(695, 210), "НЕ ДАВАЙ РИТМУ УМЕРЕТЬ", 27, TEXT, true)
@@ -397,11 +398,11 @@ func draw_help() -> void:
 	text(Vector2(766, 252), "АРКАНИСТ / ТАБЛИЦА СИНТЕЗА", 22, TEXT, true)
 	text(Vector2(766, 287), "1 — ОГОНЬ    2 — ЛЁД    3 — МОЛНИЯ", 15, CYAN)
 	var recipes = [
-		["111", "Солнечный разрыв", "взрыв + горение"], ["112", "Обжигающий туман", "широкое горение"],
-		["113", "Метеорный импульс", "тяжёлый взрыв"], ["122", "Ледяной шип", "урон + заморозка"],
-		["123", "Хаос / схлопывание", "стяжка + заморозка"], ["133", "Цепная молния", "разряд по группе"],
-		["222", "Абсолютный ноль", "ледяная волна вокруг"], ["223", "Гравитационный снег", "стяжка + лёд"],
-		["233", "Электрошторм", "взрыв электричества"], ["333", "Громовой копьеброс", "сквозной луч"]
+		["111", "Столпы пепла", "колонны огня под врагами"], ["112", "Дыхание урны", "конус пламени впереди"],
+		["113", "Комета плоти", "рывок-метеорит с взрывом"], ["122", "Кряж костей", "шипы изо льда по линии"],
+		["123", "Триптих", "огонь, лёд и молния в одну цель"], ["133", "Цепь молний", "скачки между врагами"],
+		["222", "Часовня льда", "нова, сбивает снаряды, лечит"], ["223", "Небопогребение", "врагов поднимает и бьёт оземь"],
+		["233", "Орбита бури", "три сферы бьют вокруг тебя"], ["333", "Шаг грома", "телепорт по лучу с уроном"]
 	]
 	for i in range(recipes.size()):
 		var y = 330+i*37
@@ -413,9 +414,9 @@ func draw_help() -> void:
 
 func draw_end() -> void:
 	background()
-	centered(213, "ПРОТОКОЛ ЗАВЕРШЁН" if game.won else "СВЯЗЬ С ОБОЛОЧКОЙ ПОТЕРЯНА", 18, LIME if game.won else PINK)
+	centered(213, "ОБРЯД ЗАВЕРШЁН" if game.won else "СВЯЗЬ С ОБОЛОЧКОЙ ПОТЕРЯНА", 18, LIME if game.won else PINK)
 	centered(326, "ЦИКЛ РАЗОРВАН" if game.won else "ТАКТ ОБОРВАН", 69, TEXT, true)
-	centered(379, "Машина замолчала. Впервые ты слышишь собственное сердце." if game.won else "Ещё одна оболочка. Ещё одна попытка. Не сбавляй темп.", 21, MUTED)
+	centered(379, "Усыпальница выдохнула. Впервые ты слышишь собственное сердце." if game.won else "Ещё одна оболочка. Ещё одна попытка. Не сбавляй темп.", 21, MUTED)
 	line(Vector2(270, 424),Vector2(1170,424))
 	var values = ["%07d"%game.score, str(game.kills), "%02d:%02d"%[int(game.elapsed)/60,int(game.elapsed)%60], str(game.seals)+" / 3"]
 	var labels = ["СЧЁТ", "УНИЧТОЖЕНО", "ВРЕМЯ", "ПЕЧАТИ"]

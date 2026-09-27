@@ -3,6 +3,7 @@
 .DS_Store
 /export/
 /dist/
+ZERO-BEAT.zip
 assets/music/*.ogg
 assets/music/*.mp3
 assets/music/*.wav

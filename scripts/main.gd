@@ -6,7 +6,7 @@ const ProjectileScript = preload("res://scripts/projectile.gd")
 const FXScript = preload("res://scripts/fx.gd")
 const AudioScript = preload("res://scripts/audio.gd")
 const HUDScript = preload("res://scripts/hud.gd")
-const SECTOR_NAMES = ["ПРЕДЕЛ", "СДВИГ", "СТЕКЛЯННЫЙ НЕРВ", "РАЗРЫВ", "КРАСНАЯ ЛИНИЯ", "ПЕРЕГРУЗ", "СЕРДЦЕ МАШИНЫ"]
+const SECTOR_NAMES = ["ДВЕРЬ ПРАХА", "СДВИГ", "КОСТНЫЙ НЕФ", "РАЗРЫВ", "БАГРОВЫЙ ПРИДЕЛ", "ПЕРЕГРУЗ", "СЕРДЦЕ УСЫПАЛЬНИЦЫ"]
 var player
 var world
 var fx
@@ -31,7 +31,8 @@ var damage_flash = 0.0
 var hit_marker = 0.0
 var transition_flash = 0.0
 var notice = ""
-var notice_color = Color("d4ff64")
+var notice_color = Color("d4a056")
+var zones = []
 var notice_time = 0.0
 var boss
 var won = false
@@ -105,6 +106,7 @@ func _physics_process(dt: float) -> void:
 		sector = current
 		change_perspective()
 	activate_sector(sector)
+	_tick_zones(dt)
 	for i in range(3):
 		if collected[i]: continue
 		var distance = player.global_position.distance_to(Vector3(122+i*130, 0, 0))
@@ -112,7 +114,7 @@ func _physics_process(dt: float) -> void:
 			if block_enemies(i) == 0 and spawned.has(i*2) and spawned.has(i*2+1):
 				collect_seal(i)
 			elif notice_time < 0.2:
-				notify("ПЕЧАТЬ ЗАПЕРТА / УНИЧТОЖЬ ЦЕЛИ В БЛОКЕ", Color("ff9869"), 1.0)
+				notify("ПЕЧАТЬ ЗАПЕРТА / УНИЧТОЖЬ ЦЕЛИ В БЛОКЕ", Color("e25b2a"), 1.0)
 	if phase == "escape":
 		escape_left -= dt
 		if player.global_position.x > 533:
@@ -141,7 +143,7 @@ func enter_arena() -> void:
 	transition_flash = 0.5
 	shake = 0.5
 	activate_sector(0)
-	notify("01 / ПРЕДЕЛ — НЕ СБАВЛЯЙ ТЕМП", Color("d4ff64"), 3)
+	notify("01 / ДВЕРЬ ПРАХА — НЕ СБАВЛЯЙ ТЕМП", Color("d4a056"), 3)
 	audio.play_sfx("seal", 0.7)
 
 func change_perspective() -> void:
@@ -153,14 +155,14 @@ func change_perspective() -> void:
 		player.set_side(side)
 		transition_flash = 0.4
 		audio.play_sfx("dash", 0.6)
-	notify(("2D / " if side else "3D / ") + SECTOR_NAMES[sector], Color("64e3fa"), 2)
+	notify(("2D / " if side else "3D / ") + SECTOR_NAMES[sector], Color("d4a056"), 2)
 
 func activate_sector(index: int) -> void:
 	if spawned.has(index): return
 	spawned.append(index)
 	if index == 6:
 		boss = spawn_enemy(Vector3(423, 0.2, 0), 3, 6)
-		notify("СЕРДЦЕ МАШИНЫ / ПОСЛЕДНИЙ ТАКТ", Color("ff608c"), 3)
+		notify("СЕРДЦЕ УСЫПАЛЬНИЦЫ / ПОСЛЕДНИЙ ТАКТ", Color("9a2a32"), 3)
 		return
 	var count = 7 + index
 	for i in range(count):
@@ -178,7 +180,7 @@ func spawn_enemy(at: Vector3, kind: int, section: int):
 	enemy.sector = section
 	add_child(enemy)
 	enemy.global_position = at
-	fx.wave(at, Color("ff608c"), 2)
+	fx.wave(at, Color("9a2a32"), 2)
 	return enemy
 
 func block_enemies(block: int) -> int:
@@ -217,10 +219,10 @@ func enemy_killed(enemy, weapon_name: String) -> void:
 		score += 8000
 		transition_flash = 0.6
 		shake = 0.8
-		notify("СЕРДЦЕ ОСТАНОВЛЕНО / БЕГИ К ВЫХОДУ →", Color("d4ff64"), 5)
+		notify("СЕРДЦЕ ОСТАНОВЛЕНО / БЕГИ К ВЫХОДУ →", Color("d4a056"), 5)
 		audio.play_sfx("seal", 0.65)
 
-func spawn_projectile(at: Vector3, velocity: Vector3, damage: float, friendly: bool, color: Color, blast: float = 0, status: String = "", weapon_name: String = "", style: String = "orb", ricochets: int = 0) -> void:
+func spawn_projectile(at: Vector3, velocity: Vector3, damage: float, friendly: bool, color: Color, blast: float = 0, status: String = "", weapon_name: String = "", style: String = "orb", ricochets: int = 0, gravity: float = 0.0) -> void:
 	var node = ProjectileScript.new()
 	node.game = self
 	node.velocity = velocity
@@ -232,8 +234,29 @@ func spawn_projectile(at: Vector3, velocity: Vector3, damage: float, friendly: b
 	node.source_name = weapon_name
 	node.style = style
 	node.ricochets = ricochets
+	node.gravity = gravity
 	add_child(node)
 	node.global_position = at
+
+func spawn_zone(at: Vector3, radius: float, life: float, dps: float, status: String, color: Color) -> void:
+	zones.append({"pos": at, "radius": radius, "life": life, "dps": dps, "status": status, "color": color, "tick": 0.25})
+	fx.wave(at, color, radius)
+	fx.column(at, color, 3.5)
+
+func _tick_zones(dt: float) -> void:
+	for i in range(zones.size() - 1, -1, -1):
+		var zone = zones[i]
+		zone.life -= dt
+		zone.tick -= dt
+		if zone.tick <= 0:
+			zone.tick = 0.4
+			for enemy in get_tree().get_nodes_in_group("enemies"):
+				if enemy.dead:
+					continue
+				if enemy.global_position.distance_to(zone.pos) <= zone.radius:
+					enemy.take_damage(zone.dps, Vector3.ZERO, zone.status, "ПЕПЕЛ")
+		if zone.life <= 0:
+			zones.remove_at(i)
 
 func line_clear(a: Vector3, b: Vector3) -> bool:
 	var query = PhysicsRayQueryParameters3D.create(a, b, 1)
@@ -286,7 +309,7 @@ func explode(at: Vector3, radius: float, damage: float, color: Color, status: St
 			enemy.take_damage(damage, delta.normalized()*12, status, weapon_name)
 			fx.beam(at, enemy.global_position+Vector3.UP, color, 0.06, 0.2)
 
-func notify(text: String, color: Color = Color("d4ff64"), duration: float = 2.0) -> void:
+func notify(text: String, color: Color = Color("d4a056"), duration: float = 2.0) -> void:
 	notice = text
 	notice_color = color
 	notice_time = duration

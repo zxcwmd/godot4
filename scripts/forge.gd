@@ -2,6 +2,17 @@ class_name Forge
 extends RefCounted
 ## Shared procedural geometry. No external models or textures are required.
 
+const SOOT = Color("1a120c")
+const STONE = Color("3a2e24")
+const BRONZE = Color("8a5a32")
+const BONE = Color("e4d2b0")
+const IVORY = Color("f3ead8")
+const AMBER = Color("d4a056")
+const BLOOD = Color("9a2a32")
+const COPPER = Color("6b8f72")
+const WAX = Color("c9a66b")
+const EMBER = Color("e25b2a")
+
 static var materials = {}
 
 static func mat(color: Color, glow: float = 0.0) -> StandardMaterial3D:
@@ -10,7 +21,8 @@ static func mat(color: Color, glow: float = 0.0) -> StandardMaterial3D:
 		return materials[key]
 	var m = StandardMaterial3D.new()
 	m.albedo_color = color
-	m.roughness = 0.7
+	m.roughness = 0.62 if glow <= 0.0 else 0.35
+	m.metallic = 0.18 if glow <= 0.0 else 0.0
 	if glow > 0.0:
 		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		m.emission_enabled = true
@@ -56,12 +68,25 @@ static func orb(parent: Node3D, at: Vector3, radius: float, color: Color, glow: 
 static func ring(parent: Node3D, at: Vector3, radius: float, color: Color, thickness: float = 0.07) -> MeshInstance3D:
 	var node = MeshInstance3D.new()
 	var mesh = TorusMesh.new()
-	mesh.inner_radius = radius - thickness
+	mesh.inner_radius = maxf(0.01, radius - thickness)
 	mesh.outer_radius = radius + thickness
 	mesh.rings = 32
-	mesh.ring_segments = 6
+	mesh.ring_segments = 8
 	node.mesh = mesh
 	node.material_override = mat(color, 1.0)
+	parent.add_child(node)
+	node.position = at
+	return node
+
+static func cyl(parent: Node3D, at: Vector3, radius: float, height: float, color: Color, glow: float = 0.0, top: float = -1.0) -> MeshInstance3D:
+	var node = MeshInstance3D.new()
+	var mesh = CylinderMesh.new()
+	mesh.bottom_radius = radius
+	mesh.top_radius = radius if top < 0.0 else top
+	mesh.height = height
+	mesh.radial_segments = 12
+	node.mesh = mesh
+	node.material_override = mat(color, glow)
 	parent.add_child(node)
 	node.position = at
 	return node

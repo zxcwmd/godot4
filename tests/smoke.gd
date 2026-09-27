@@ -40,7 +40,12 @@ func run() -> void:
 	check(game.phase == "hub" and game.hud.menu == "hub", "boot in class-selection hub")
 	check(game.world.seals.size() == 3 and game.world.gates.size() == 3, "three seals and real gates")
 	check(game.player.WEAPONS[0].size() == 5, "five melee weapons")
-	check(game.player.WEAPONS[1].size() == 4, "four ranged weapons")
+	check(game.player.WEAPONS[1].size() == 8, "eight ranged weapons")
+	var spell_names = {}
+	for code in game.player.SPELLS:
+		var title = str(game.player.SPELLS[code][0])
+		check(not spell_names.has(title), "unique spell name " + title)
+		spell_names[title] = true
 	check(game.player.SPELLS.size() == 10, "ten unordered elemental combinations")
 	for id in range(3):
 		game.hud.select_class(id)
@@ -102,6 +107,24 @@ func run() -> void:
 		game.player.energy = 100
 		game.player.attack(false)
 		check(game.player.energy < 100, "spell consumes energy: " + code)
+	game.player.invoked = "122"
+	game.player.energy = 100
+	game.player.attack(false)
+	check(game.player.storm_time > 0, "storm spell persists as orbiting orbs")
+	game.player.invoked = "002"
+	game.player.energy = 100
+	game.player.attack(false)
+	check(game.player.comet and game.player.dash_time > 0, "comet spell is a body dash, not a bolt")
+	game.player.invoked = "111"
+	game.player.energy = 100
+	var hp_before = game.player.hp
+	game.player.hp = 80
+	game.player.attack(false)
+	check(game.player.hp > 80, "ice chapel heals instead of only painting a blast")
+	game.player.hp = hp_before
+	game.player.comet = false
+	game.player.dash_time = 0
+	game.player.storm_time = 0
 	await settle()
 	for projectile in get_nodes_in_group("projectiles"):
 		projectile.queue_free()

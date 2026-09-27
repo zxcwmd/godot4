@@ -39,6 +39,7 @@ func run() -> void:
 	await settle()
 	check(game.phase == "hub" and game.hud.menu == "hub", "boot in class-selection hub")
 	check(game.world.seals.size() == 3 and game.world.gates.size() == 3, "three seals and real gates")
+	check(game.player.avatar.joints.size() > 12, "player body is an articulated puppet")
 	check(game.player.WEAPONS[0].size() == 5, "five melee weapons")
 	check(game.player.WEAPONS[1].size() == 8, "eight ranged weapons")
 	var spell_names = {}
@@ -55,6 +56,9 @@ func run() -> void:
 	game.player.global_position = Vector3(-7, -6, 0)
 	await settle()
 	check(game.phase == "run" and game.spawned.has(0), "fall through hub pit enters arena")
+	var spawned_enemy = get_nodes_in_group("enemies")[0]
+	check(spawned_enemy.body.joints.size() > 12, "enemies are articulated puppets")
+	check(spawned_enemy.body.has_method("animate"), "enemy puppet exposes animation")
 	check(game.player.global_position.x > 0, "arena spawn replaces falling transform")
 	game.player.global_position = Vector3(6, 0.05, 0)
 	game.player.velocity = Vector3.ZERO

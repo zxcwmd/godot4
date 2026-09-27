@@ -32,8 +32,6 @@ func _ready() -> void:
 	collision.shape = capsule
 	collision.position.y = capsule.height / 2
 	add_child(collision)
-	body = Node3D.new()
-	add_child(body)
 	match kind:
 		0:
 			hp = 65; speed = 6.8; tint = Forge.BLOOD
@@ -44,24 +42,10 @@ func _ready() -> void:
 		3:
 			hp = 2300; speed = 1.8; tint = Forge.EMBER
 	max_hp = hp
-	if kind == 3:
-		core = Forge.orb(body, Vector3(0, 2.5, 0), 1.25, tint)
-		for i in range(3):
-			var ring = Forge.ring(body, Vector3(0, 2.5, 0), 2.1+i*0.2, tint, 0.1)
-			ring.rotation = Vector3(i*0.9, 0, i*0.7)
-		for x in [-1.9, 1.9]:
-			Forge.box(body, Vector3(x, 2.3, 0), Vector3(0.6, 2.8, 0.8), Forge.STONE)
-		Forge.cyl(body, Vector3(0, 1.1, 0), 1.1, 2.2, Forge.BRONZE)
-	else:
-		var size = 1.35 if kind == 2 else 1.0
-		Forge.box(body, Vector3(0, 1.05, 0) * size, Vector3(0.85, 0.85, 0.5) * size, Forge.STONE)
-		Forge.cyl(body, Vector3(0, 1.62, 0) * size, 0.22 * size, 0.4 * size, Forge.BONE)
-		core = Forge.box(body, Vector3(0, 1.68, 0.27) * size, Vector3(0.52, 0.12, 0.06) * size, tint, 1)
-		for x in [-0.52, 0.52]:
-			Forge.box(body, Vector3(x, 0.98, 0) * size, Vector3(0.2, 0.9, 0.28) * size, tint)
-			Forge.box(body, Vector3(x*0.5, 0.35, 0) * size, Vector3(0.25, 0.7, 0.32) * size, Forge.BRONZE)
-		if kind == 1:
-			Forge.cyl(body, Vector3(0.55, 1.1, 0.35), 0.08, 1.0, Forge.WAX, 0.6)
+	body = Puppet.new()
+	add_child(body)
+	body.build(kind, tint)
+	core = body.core
 	warning = Forge.ring(self, Vector3(0, 0.08, 0), 1.0, tint, 0.04)
 	warning.visible = false
 
@@ -72,7 +56,8 @@ func _physics_process(dt: float) -> void:
 	attack_timer -= dt
 	frozen = maxf(0, frozen-dt)
 	flash = maxf(0, flash-dt)
-	core.material_override = Forge.mat(Color.WHITE if flash > 0 else (Forge.BONE if frozen > 0 else tint), 1)
+	if is_instance_valid(core):
+		core.material_override = Forge.mat(Color.WHITE if flash > 0 else (Forge.BONE if frozen > 0 else tint), 1)
 	if lift > 0:
 		lift -= dt
 		velocity.y = 12
@@ -125,6 +110,8 @@ func _physics_process(dt: float) -> void:
 	stagger = stagger.move_toward(Vector3.ZERO, dt*20)
 	if is_on_wall() and is_on_floor(): velocity.y = 8.5
 	move_and_slide()
+	if body.has_method("animate"):
+		body.animate(dt, velocity, is_on_floor(), kind == 0 and distance < 2.4, charge, frozen > 0, lift > 0)
 	if sector % 2 == 1:
 		global_position.z = move_toward(global_position.z, 0, dt*10)
 	global_position.x = clampf(global_position.x, sector*65+2, sector*65+62)
@@ -132,10 +119,13 @@ func _physics_process(dt: float) -> void:
 	if attack_timer <= 0 and frozen <= 0 and charge <= 0:
 		if kind == 0 and distance < 2.0:
 			game.player.hurt(10); attack_timer = 0.9
+			if body.has_method("strike"): body.strike()
 		elif kind == 1 and distance < 28:
 			shoot(to_player, 15); attack_timer = 1.7
+			if body.has_method("strike"): body.strike()
 		elif kind == 2 and distance < 5:
 			charge = 0.9; attack_timer = 3.2
+			if body.has_method("strike"): body.strike()
 		elif kind == 3:
 			boss_cycle += 1
 			attack_timer = 1.7 if hp > max_hp*0.5 else 1.15
@@ -161,6 +151,8 @@ func take_damage(amount: float, push: Vector3 = Vector3.ZERO, status: String = "
 	if dead: return
 	hp -= amount
 	flash = 0.09
+	if body.has_method("flinch_hit"):
+		body.flinch_hit()
 	stagger += push * (0.2 if kind == 3 else 1.0)
 	if status == "freeze": frozen = 2.5 if kind < 3 else 0.65
 	if status == "burn": burn = 3.0

@@ -21,7 +21,6 @@ var camera: Camera3D
 var avatar: Node3D
 var viewmodel: Node3D
 var side_weapon: Node3D
-var legs = []
 var hp = 100.0
 var energy = 100.0
 var class_id = 0
@@ -66,19 +65,16 @@ func _ready() -> void:
 	camera.fov = 92
 	add_child(camera)
 	camera.current = true
-	avatar = Node3D.new()
+	avatar = Puppet.new()
 	add_child(avatar)
-	Forge.box(avatar, Vector3(0, 0.95, 0), Vector3(0.65, 0.8, 0.42), Forge.BONE)
-	Forge.cyl(avatar, Vector3(0, 1.55, 0), 0.22, 0.42, Forge.STONE)
-	Forge.box(avatar, Vector3(0.22, 1.58, 0.02), Vector3(0.08, 0.16, 0.46), Forge.AMBER, 1)
-	for x in [-0.19, 0.19]:
-		legs.append(Forge.box(avatar, Vector3(x, 0.31, 0), Vector3(0.23, 0.62, 0.28), Forge.BRONZE))
-	Forge.cyl(avatar, Vector3(-0.44, 0.93, 0), 0.09, 0.84, Forge.AMBER)
-	Forge.cyl(avatar, Vector3(0.44, 0.93, 0), 0.09, 0.84, Forge.AMBER)
+	avatar.build(Puppet.PLAYER, Forge.AMBER)
 	avatar.visible = false
 	side_weapon = Node3D.new()
-	add_child(side_weapon)
-	side_weapon.position.y = 1.05
+	if avatar.hand:
+		avatar.hand.add_child(side_weapon)
+	else:
+		add_child(side_weapon)
+		side_weapon.position.y = 1.05
 	side_weapon.visible = false
 	viewmodel = Node3D.new()
 	camera.add_child(viewmodel)
@@ -104,6 +100,7 @@ func build_weapon() -> void:
 		child.queue_free()
 	for child in side_weapon.get_children():
 		child.queue_free()
+	_view_arms()
 	_build_side()
 	if class_id == 0:
 		match weapon:
@@ -158,6 +155,24 @@ func _build_side() -> void:
 	else:
 		for i in range(3):
 			Forge.orb(side_weapon, Vector3(0.55 + i * 0.28, 0.18 * sin(i * 2.0), 0.1), 0.12, element_color(elements[i]))
+
+func _view_arms() -> void:
+	# Visible first-person arms so the player body is not only a floating gun.
+	var left = Node3D.new()
+	viewmodel.add_child(left)
+	left.position = Vector3(-0.28, -0.42, -0.28)
+	left.rotation_degrees = Vector3(18, 12, -16)
+	Forge.cyl(left, Vector3(0, 0, 0), 0.055, 0.18, Forge.STONE)
+	Forge.cyl(left, Vector3(0, -0.16, -0.02), 0.045, 0.28, Forge.BONE)
+	Forge.box(left, Vector3(0, -0.32, 0), Vector3(0.1, 0.1, 0.08), Forge.BRONZE)
+	for f in range(3):
+		Forge.box(left, Vector3((f - 1) * 0.03, -0.4, -0.02), Vector3(0.022, 0.09, 0.024), Forge.BONE)
+	var right = Node3D.new()
+	viewmodel.add_child(right)
+	right.position = Vector3(0.22, -0.48, -0.22)
+	right.rotation_degrees = Vector3(22, -8, 12)
+	Forge.cyl(right, Vector3(0, 0, 0), 0.05, 0.16, Forge.STONE)
+	Forge.cyl(right, Vector3(0.02, -0.12, -0.04), 0.042, 0.2, Forge.BONE)
 
 func _wrap(parent: Node3D, at: Vector3, length: float) -> void:
 	for i in range(5):
@@ -367,6 +382,8 @@ func set_side(value: bool) -> void:
 	if value:
 		global_position.z = 0
 		game.side_camera.current = true
+		if avatar.has_method("animate"):
+			avatar.rotation.y = -PI / 2
 	else:
 		camera.current = true
 		yaw = -PI / 2
@@ -393,8 +410,8 @@ func _physics_process(dt: float) -> void:
 		var target = Plane(Vector3.FORWARD, 0).intersects_ray(ray_origin, ray_dir)
 		if target != null:
 			aim = (target - (global_position + Vector3.UP)).normalized()
-			avatar.rotation.y = 0 if aim.x > 0 else PI
-			side_weapon.rotation.z = atan2(aim.y, aim.x) + recoil * 0.25
+			avatar.rotation.y = (-PI / 2) if aim.x > 0 else (PI / 2)
+			side_weapon.rotation.x = -atan2(aim.y, absf(aim.x) + 0.001) + recoil * 0.2
 	else:
 		camera.rotation = Vector3(pitch, yaw, 0)
 		dir = (Basis(Vector3.UP, yaw) * Vector3(input.x, 0, input.y)).normalized()
@@ -453,8 +470,8 @@ func _physics_process(dt: float) -> void:
 	elif Input.is_action_pressed("alt_attack") and cooldown <= 0:
 		attack(true)
 	walk_clock += dt * Vector2(velocity.x, velocity.z).length()
-	for i in range(legs.size()):
-		legs[i].rotation.z = sin(walk_clock * 1.5 + i * PI) * 0.5 if velocity.length() > 1 else 0.0
+	if avatar.has_method("animate"):
+		avatar.animate(dt, velocity, is_on_floor(), class_id == 0 and Input.is_action_pressed("attack"), 0.0, false, not is_on_floor() or comet)
 	if not reduced_motion:
 		camera.fov = lerpf(camera.fov, 104 if dash_time > 0 else 92, dt * 8)
 		camera.position = Vector3(randf_range(-1, 1) * game.shake * 0.06, 1.55 + sin(walk_clock * 1.6) * 0.035, 0)
@@ -517,6 +534,8 @@ func melee(alt: bool) -> void:
 			game.fx.beam(muzzle(), enemy.global_position + Vector3.UP, Forge.AMBER, 0.08)
 	if weapon == 3 and hit_count > 0:
 		hp = minf(100, hp + 1.8 * hit_count)
+	if avatar.has_method("strike"):
+		avatar.strike()
 	game.fx.crescent(muzzle(), aim, Forge.AMBER if weapon != 3 else Forge.EMBER, reach * 0.55)
 	game.fx.flash(muzzle() + aim * 0.4, Forge.WAX, 0.12)
 	if weapon == 4 or alt:

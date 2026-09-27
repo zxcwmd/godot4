@@ -19,25 +19,37 @@ var accents = [Color("ffde00"), Color("d01018"), Color("f2ece0")]
 func side_sector(index: int) -> bool:
 	return index % 2 == 1 and index < 9
 
+func shape(index: int) -> String:
+	# Irregular on purpose: rooms and pipes do not alternate with 3D/2D.
+	return ["pipe", "room", "room", "pipe", "mix", "room", "room", "pipe", "room", "room"][clampi(index, 0, 9)]
+
+func half_width(index: int) -> float:
+	if index >= 9:
+		return 22.0
+	var s = shape(index)
+	if side_sector(index):
+		return 0.0
+	return 4.0 if s == "pipe" else (7.0 if s == "mix" else 12.0)
+
 func make_palette(side: bool, sector: int) -> Dictionary:
 	var block := clampi(int(sector) >> 1, 0, 4)
 	if side:
-		# Terminal hell — black void, gold stamp, blood cutout. Another game.
-		var acc = [Color("ff2a1a"), Color("ffde00"), Color("ffffff"), Color("ff2a1a"), Color("ffde00")][block]
-		var glo = [Color("ffde00"), Color("ff2a1a"), Color("ffde00"), Color("ffffff"), Color("ff2a1a")][block]
+		# Gluttony — wet meat, teeth, black gut. Another game.
+		var acc = [Color("ff4a6a"), Color("ffd0c0"), Color("ff2a1a"), Color("ff8a9a"), Color("ffffff")][block]
+		var glo = [Color("ff2a1a"), Color("ff4a6a"), Color("ffd0c0"), Color("ff2a1a"), Color("ff4a6a")][block]
 		return {
-			"dark": Color("000000"), "floor": Color("0a0a0a"), "wall": Color("050505"),
-			"metal": Color("ffde00"), "accent": acc, "glow": glo, "bone": Color("f4f0e4"),
-			"fog": Color("000000"), "bg": Color("000000"), "sun": Color("ffde00"),
-			"ambient": Color("3a1008"), "glass": Color(1.0, 0.15, 0.1, 0.35)
+			"dark": Color("120508"), "floor": Color("4a1418"), "wall": Color("2a0a0e"),
+			"metal": Color("e8d8c8"), "accent": acc, "glow": glo, "bone": Color("e8c8b8"),
+			"fog": Color("2a0408"), "bg": Color("0a0204"), "sun": Color("ff3040"),
+			"ambient": Color("401018"), "glass": Color(0.9, 0.1, 0.15, 0.4)
 		}
-	# Marble palace — cream stone, gold veins, blood on the floor.
-	var acc2 = [Color("ffde00"), Color("d01018"), Color("ffde00"), Color("ffffff"), Color("d01018")][block]
+	# Greed — sun, marble, gold. Not the same space as the gut.
+	var acc2 = [Color("ffde00"), Color("e0b000"), Color("fff8d0"), Color("ffde00"), Color("ffffff")][block]
 	var glo2 = [Color("d01018"), Color("ffde00"), Color("d01018"), Color("ffde00"), Color("ff2a1a")][block]
 	return {
-		"dark": Color("12100e"), "floor": Color("d8d2c4"), "wall": Color("ece6d8"),
+		"dark": Color("1a1410"), "floor": Color("d8d2c4"), "wall": Color("ece6d8"),
 		"metal": Color("e0b000"), "accent": acc2, "glow": glo2, "bone": Color("f7f2e8"),
-		"fog": Color("6a5040"), "bg": Color("1a1410"), "sun": Color("ffe8a0"),
+		"fog": Color("c8a070"), "bg": Color("2a2018"), "sun": Color("ffe8a0"),
 		"ambient": Color("c0a888"), "glass": Color(0.85, 0.1, 0.1, 0.28)
 	}
 
@@ -90,8 +102,11 @@ func apply_palette(side: bool, sector: int) -> void:
 		env.background_color = pal.bg
 		env.fog_light_color = pal.fog
 		env.ambient_light_color = pal.ambient
+		env.fog_density = 0.032 if side else 0.007
+		env.ambient_light_energy = 0.35 if side else 0.9
 	if sun:
 		sun.light_color = pal.sun
+		sun.light_energy = 0.15 if side else 1.45
 
 func build(owner_game) -> void:
 	game = owner_game
@@ -102,12 +117,12 @@ func build(owner_game) -> void:
 	env.background_color = pal.bg
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = pal.ambient
-	env.ambient_light_energy = 0.7
+	env.ambient_light_energy = 0.9
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.fog_enabled = true
 	env.fog_light_color = pal.fog
-	env.fog_density = 0.012
-	env.fog_light_energy = 0.8
+	env.fog_density = 0.007
+	env.fog_light_energy = 0.85
 	env.glow_enabled = true
 	env.glow_intensity = 0.55
 	env.glow_bloom = 0.12
@@ -116,7 +131,7 @@ func build(owner_game) -> void:
 	sun = DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-50, 30, 0)
 	sun.light_color = pal.sun
-	sun.light_energy = 1.35
+	sun.light_energy = 1.45
 	add_child(sun)
 	build_hub()
 	for sector in range(10):
@@ -139,9 +154,6 @@ func banner(at: Vector3, tall: float = 5.0) -> void:
 func blood(at: Vector3, size: Vector3) -> void:
 	box(self, at, size, "glow", 0.85)
 
-func card(at: Vector3, size: Vector3, role: String = "bone") -> void:
-	box(self, at, size, role, 0.0 if role != "accent" else 0.8)
-
 func lamp(at: Vector3, role: String, energy: float, radius: float) -> void:
 	var light = OmniLight3D.new()
 	light.light_color = col(role)
@@ -153,17 +165,36 @@ func lamp(at: Vector3, role: String, energy: float, radius: float) -> void:
 	dye(light, role)
 	lights.append(light)
 
+func statue(at: Vector3, h: float = 8.0) -> void:
+	cyl(self, at + Vector3(0, h * 0.28, 0), 0.7, h * 0.55, "bone")
+	box(self, at + Vector3(0, h * 0.62, 0), Vector3(2.2, h * 0.28, 1.1), "wall")
+	orb(self, at + Vector3(0, h * 0.82, 0), 0.55, "bone", 0.0)
+	box(self, at + Vector3(0, h * 0.82, -0.5), Vector3(0.7, 0.12, 0.08), "accent", 1)
+	cyl(self, at + Vector3(0, h * 0.08, 0), 1.1, 0.2, "metal")
+
+func rib(at: Vector3, span: float = 5.0) -> void:
+	var bone = cyl(self, at, 0.12, span, "bone")
+	bone.rotation_degrees.z = 70
+	var other = cyl(self, at + Vector3(0, 0, 0.4), 0.12, span, "bone")
+	other.rotation_degrees.z = -70
+
+func boil(at: Vector3, r: float = 0.7) -> void:
+	orb(self, at, r, "glow" if r > 0.8 else "floor", 0.4 if r > 0.8 else 0.0)
+
+func ledge(x: float, y: float, w: float, thick: float = 0.35) -> void:
+	box(self, Vector3(x, y, 0), Vector3(w, thick, 3.2), "bone", 0, true)
+
 func build_hub() -> void:
 	box(self, Vector3(-36, -0.5, 0), Vector3(44, 1, 20), "dark", 0, true)
 	box(self, Vector3(-58, 6, 0), Vector3(1, 12, 20), "dark", 0, true)
 	for z in [-10, 10]:
 		box(self, Vector3(-29, 5, z), Vector3(58, 10, 0.7), "wall", 0, true)
 		box(self, Vector3(-29, 0.04, z * 0.9), Vector3(56, 0.08, 0.2), "metal")
-	# Sparse giant columns, not a picket fence.
 	for x in [-52, -36, -20]:
 		column(Vector3(x, 0, -7.4), 9)
 		column(Vector3(x, 0, 7.4), 9)
 		banner(Vector3(x + 4, 3.5, -9.4), 5)
+	statue(Vector3(-44, 0, 6.5), 7)
 	for x in range(-50, -16, 8):
 		var light_tile = (int(x) / 8) % 2 == 0
 		box(self, Vector3(x, 0.03, 0), Vector3(7.6, 0.04, 7.6), "bone" if light_tile else "dark")
@@ -204,68 +235,111 @@ func build_sector(index: int) -> void:
 	var start = index * 65.0
 	var center = start + 32.5
 	var side = side_sector(index)
-	box(self, Vector3(center, -0.6, 0), Vector3(65, 1.2, 20), "floor", 0, true)
+	var s = shape(index)
+	var zspan = 8.5 if s == "pipe" else (20.0 if s == "mix" else 26.0)
 	if side:
-		_build_2d(index, start, center)
+		zspan = 8.0
+	box(self, Vector3(center, -0.6, 0), Vector3(65, 1.2, zspan), "floor", 0, true)
+	if side:
+		_build_2d(index, start, center, s)
 	else:
-		_build_3d(index, start, center)
+		_build_3d(index, start, center, s)
 	if index > 0:
-		column(Vector3(start, 0, -8), 9)
-		column(Vector3(start, 0, 8), 9)
-		box(self, Vector3(start, 9.2, 0), Vector3(1.2, 0.35, 16), "metal")
-		var signage = Forge.label(self, Vector3(start - 0.2, 6.8, 0), "LAYER / 2D" if side else "LAYER / 3D", 50, col("accent"))
+		if side:
+			boil(Vector3(start, 3.5, -3), 1.4)
+			rib(Vector3(start + 1, 4.5, 0), 6)
+		else:
+			column(Vector3(start, 0, -half_width(index) * 0.85), 9)
+			column(Vector3(start, 0, half_width(index) * 0.85), 9)
+			box(self, Vector3(start, 9.2, 0), Vector3(1.2, 0.35, minf(16, zspan)), "metal")
+		var layer = "КИШКА / 2D" if side else "ЖАДНОСТЬ / 3D"
+		var signage = Forge.label(self, Vector3(start - 0.2, 6.8, 0), layer, 46, col("accent"))
 		signage.rotation.y = -PI / 2
 		tag_label(signage, "accent")
 	if index in [7, 8]:
-		var g = box(self, Vector3(start, 6, 0), Vector3(0.4, 12, 20), "accent", 1, true)
+		var g = box(self, Vector3(start, 6, 0), Vector3(0.4, 12, maxf(20, zspan)), "accent", 1, true)
 		boss_gates.append(g)
 	if index == 0:
 		box(self, Vector3(0, 4, 0), Vector3(0.5, 8, 20), "dark", 0, true)
 
-func _build_3d(index: int, start: float, center: float) -> void:
-	# Marble hall: checker plates, few fat columns, blood, gold ribs. Not a pipe of posts.
-	for z in [-10, 10]:
-		box(self, Vector3(center, 7, z), Vector3(65, 14, 0.7), "wall", 0, true)
-		box(self, Vector3(center, 1.6, z * 0.96), Vector3(65, 0.12, 0.18), "metal")
-		box(self, Vector3(center, 10.5, z * 0.96), Vector3(65, 0.1, 0.14), "glow", 0.4)
-	# Throat then chamber: inner jaws at the entrance only.
-	box(self, Vector3(start + 6, 3.5, 6.2), Vector3(12, 7, 1.2), "dark", 0, true)
-	box(self, Vector3(start + 6, 3.5, -6.2), Vector3(12, 7, 1.2), "dark", 0, true)
-	for i in range(4):
-		var x = start + 14 + i * 14
+func _build_3d(index: int, start: float, center: float, s: String) -> void:
+	var hw = 4.2 if s == "pipe" else (8.0 if s == "mix" else 13.0)
+	var ceil_h = 6.2 if s == "pipe" else 13.0
+	for zsign in [-1.0, 1.0]:
+		box(self, Vector3(center, ceil_h * 0.5, zsign * hw), Vector3(65, ceil_h, 0.7), "wall", 0, true)
+		box(self, Vector3(center, 1.4, zsign * (hw - 0.3)), Vector3(65, 0.1, 0.16), "metal")
+	if s == "pipe":
+		for i in range(6):
+			var x = start + 8 + i * 10
+			box(self, Vector3(x, ceil_h, 0), Vector3(0.35, 0.25, hw * 2), "metal")
+			blood(Vector3(x, 0.07, 0), Vector3(2.2, 0.04, 1.0))
+		lamp(Vector3(center, 5.2, 0), "accent", 1.8, 14)
+		var mark = Forge.label(self, Vector3(center, 4.6, -hw + 0.4), "ЗЕВ", 72, col("accent"))
+		tag_label(mark, "accent")
+		return
+	if s == "mix":
+		# First third is a gold throat, then it dumps you into a plaza.
+		box(self, Vector3(start + 10, 3.5, 6.4), Vector3(18, 7, 1.1), "dark", 0, true)
+		box(self, Vector3(start + 10, 3.5, -6.4), Vector3(18, 7, 1.1), "dark", 0, true)
+		for i in range(3):
+			box(self, Vector3(start + 6 + i * 6, 6.2, 0), Vector3(0.3, 0.2, 8), "metal")
+		statue(Vector3(center + 8, 0, 0), 9)
+		column(Vector3(start + 40, 0, -10), 11)
+		column(Vector3(start + 40, 0, 10), 11)
+		blood(Vector3(center + 8, 0.07, 0), Vector3(8, 0.05, 8))
+		lamp(Vector3(center + 8, 9, 0), "glow", 3.0, 20)
+		return
+	# Room: open marble court, corners only, one idol.
+	for i in range(3):
+		var x = start + 16 + i * 16
 		var light = i % 2 == 0
-		box(self, Vector3(x, 0.04, 0), Vector3(12, 0.05, 12), "bone" if light else "dark")
-		if i == 1 or i == 3:
-			column(Vector3(x, 0, -7.2), 11)
-			column(Vector3(x, 0, 7.2), 11)
-			banner(Vector3(x + 3, 4, -9.5), 6)
-		if i == 0 or i == 2:
-			blood(Vector3(x + 2, 0.07, 3 - i), Vector3(4.5, 0.05, 1.8))
-			prism(self, Vector3(x - 3, 0.4, 7.2), Vector3(1.4, 1.1, 2.2), "glow", 0.5)
-	lamp(Vector3(center, 8.5, 0), "glow", 2.4, 22)
-	# Gold ceiling rib, one, not a grid.
-	box(self, Vector3(center, 12.4, 0), Vector3(40, 0.2, 0.35), "metal")
-	box(self, Vector3(center, 12.4, 0), Vector3(0.35, 0.2, 16), "metal")
+		box(self, Vector3(x, 0.04, 0), Vector3(14, 0.05, 14), "bone" if light else "dark")
+	column(Vector3(start + 18, 0, -10), 12)
+	column(Vector3(start + 18, 0, 10), 12)
+	column(Vector3(start + 48, 0, -10), 12)
+	column(Vector3(start + 48, 0, 10), 12)
+	statue(Vector3(center, 0, -8), 10)
+	banner(Vector3(center + 6, 4, -12.4), 7)
+	blood(Vector3(center, 0.07, 3), Vector3(6, 0.05, 2.4))
+	box(self, Vector3(center, 12.6, 0), Vector3(28, 0.2, 0.35), "metal")
+	box(self, Vector3(center, 12.6, 0), Vector3(0.35, 0.2, 18), "metal")
+	lamp(Vector3(center, 9.5, 0), "glow", 2.6, 24)
+	var title = Forge.label(self, Vector3(center, 8.2, -12), "ДВОР", 88, col("accent"))
+	tag_label(title, "accent")
 
-func _build_2d(index: int, start: float, center: float) -> void:
-	# Paper theater: black void, flat cards, stamps. No colonnade.
-	box(self, Vector3(center, 6, -10), Vector3(65, 12, 0.5), "dark", 0, true)
+func _build_2d(index: int, start: float, center: float, s: String) -> void:
+	# Side-scroller gut: backplane, teeth, platforms. Not a marble hall on its side.
+	box(self, Vector3(center, 7, -6), Vector3(65, 14, 0.5), "wall", 0, true)
+	for i in range(8):
+		boil(Vector3(start + 6 + i * 8, 1.2 + (i % 3) * 0.4, -5.4), 0.5 + (i % 2) * 0.35)
 	for i in range(5):
-		var x = start + 8 + i * 12
-		var w = 9.0 if i % 2 == 0 else 6.0
-		var h = 9.0 if i % 2 == 0 else 12.0
-		card(Vector3(x, h * 0.45, -9.55), Vector3(w, h, 0.08), "bone" if i % 2 == 0 else "dark")
-		box(self, Vector3(x, 0.5, -9.4), Vector3(w * 0.4, 0.12, 0.06), "accent", 1)
-	blood(Vector3(center, 0.06, 0), Vector3(50, 0.04, 0.9))
-	for offset in [18.0, 40.0]:
-		# Stage flats, thin in Z — cardboard, not rooms.
-		card(Vector3(start + offset, 2.2, 0), Vector3(0.18, 4.4, 5.5), "metal")
-		prism(self, Vector3(start + offset, 4.6, 0), Vector3(0.4, 1.2, 2.4), "accent", 0.9)
-	var titles = ["", "01 / КУЛИСА", "", "02 / РЕЗНЯ", "", "03 / ПЛОСКОСТЬ", "", "ПОГОНЯ"]
-	var huge = Forge.label(self, Vector3(center, 6.4, -9.3), titles[index] if index < titles.size() else "АД", 140, col("accent"))
+		rib(Vector3(start + 10 + i * 12, 6.5, -2), 5.5)
+	# Ceiling teeth.
+	for i in range(7):
+		prism(self, Vector3(start + 8 + i * 8, 9.4, 0), Vector3(0.8, 1.8, 0.8), "bone")
+	if s == "pipe":
+		box(self, Vector3(center, 5.4, 0), Vector3(65, 0.4, 4.5), "floor", 0, true)
+		for i in range(4):
+			ledge(start + 12 + i * 14, 2.2, 6.0)
+		blood(Vector3(center, 0.08, 0), Vector3(60, 0.05, 1.2))
+		lamp(Vector3(center, 4.2, -3), "glow", 1.4, 14)
+		var tight = Forge.label(self, Vector3(center, 7.2, -5.6), "ГЛОТКА", 110, col("accent"))
+		tight.modulate.a = 0.8
+		tag_label(tight, "accent")
+		return
+	# Room: stacked platforms, you jump. Spine floor stays so seals/tests don't fall.
+	ledge(start + 16, 2.4, 8)
+	ledge(start + 30, 4.2, 7)
+	ledge(start + 44, 2.8, 9)
+	ledge(start + 22, 5.8, 5)
+	boil(Vector3(start + 28, 1.4, 1.5), 1.1)
+	boil(Vector3(start + 50, 1.6, -1.2), 0.9)
+	blood(Vector3(center, 0.08, 0), Vector3(50, 0.05, 1.4))
+	lamp(Vector3(center, 6, -4), "accent", 1.8, 16)
+	var titles = ["", "КАМЕРА", "", "ГЛОТКА", "", "ЖЕЛУДОК", "", "ПОГОНЯ"]
+	var huge = Forge.label(self, Vector3(center, 7.4, -5.6), titles[index] if index < titles.size() else "КИШКА", 120, col("accent"))
 	huge.modulate.a = 0.85
 	tag_label(huge, "accent")
-	lamp(Vector3(center, 6, -6), "accent", 1.6, 18)
 
 func build_arena() -> void:
 	var start = 585.0
@@ -279,6 +353,7 @@ func build_arena() -> void:
 	for x in [-1.0, 1.0]:
 		for z in [-1.0, 1.0]:
 			column(center + Vector3(x * 18, 0, z * 16), 12)
+	statue(center + Vector3(0, 0, -18), 11)
 	blood(center + Vector3(0, 0.07, 0), Vector3(14, 0.05, 14))
 	var core = ring(self, center + Vector3(0, 0.1, 0), 7, "accent", 0.12)
 	core.rotation.x = PI / 2
@@ -309,8 +384,6 @@ func build_seal(index: int) -> void:
 	for z in range(-9, 10, 2):
 		box(gate, Vector3(-0.01, 0, z), Vector3(0.08, 8, 0.06), "glow", 1)
 	gates.append(gate)
-	column(Vector3(x + 6, 0, -8.5), 9)
-	column(Vector3(x + 6, 0, 8.5), 9)
 
 func open_seal(index: int) -> void:
 	seals[index].hide()

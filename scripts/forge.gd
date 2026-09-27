@@ -1,6 +1,6 @@
 class_name Forge
 extends RefCounted
-## Marble, gold, blood. No imported models.
+## Greed marble / Gluttony flesh / a stranger who belongs to neither.
 
 const SOOT = Color("080808")
 const STONE = Color("c8c2b4")
@@ -12,6 +12,12 @@ const BLOOD = Color("d01018")
 const COPPER = Color("8a6a20")
 const WAX = Color("ffde00")
 const EMBER = Color("ff2a1a")
+const PORCELAIN = Color("e6ddd0")
+const IRON = Color("14161c")
+const CYAN = Color("00e5ff")
+const MAGENTA = Color("ff2bd6")
+const MEAT = Color("6a1820")
+const FAT = Color("c87868")
 
 static var materials = {}
 

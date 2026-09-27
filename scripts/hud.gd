@@ -429,7 +429,7 @@ func draw_pause() -> void:
 func draw_help() -> void:
 	background()
 	text(Vector2(48, 151), "ПРОТОКОЛ ВЫЖИВАНИЯ", 46, TEXT, true)
-	text(Vector2(50, 191), "Хаб → яма → 6 залов → 3 печати → босс (3D, 2D, 3D, клетка) → выход.", 20, LIME)
+	text(Vector2(50, 191), "Хаб → яма → Жадность/Кишка вразброс → 3 печати → босс → выход.", 20, LIME)
 	line(Vector2(720,235),Vector2(720,754))
 	text(Vector2(48, 252), "УПРАВЛЕНИЕ", 22, TEXT, true)
 	var rows = [

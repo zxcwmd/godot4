@@ -67,7 +67,7 @@ func _ready() -> void:
 	camera.current = true
 	avatar = Puppet.new()
 	add_child(avatar)
-	avatar.build(Puppet.PLAYER, Forge.AMBER)
+	avatar.build(Puppet.PLAYER, Forge.CYAN)
 	avatar.visible = false
 	side_weapon = Node3D.new()
 	if avatar.hand:
@@ -417,16 +417,18 @@ func _physics_process(dt: float) -> void:
 		dir = (Basis(Vector3.UP, yaw) * Vector3(input.x, 0, input.y)).normalized()
 		aim = -camera.global_basis.z
 	var speed = 11.0 if class_id != 0 else 12.2
+	if side_mode:
+		speed *= 1.22
 	if Input.is_action_just_pressed("jump") or (side_mode and Input.is_action_just_pressed("move_forward")):
 		jump_buffer = 0.15
 	jump_buffer -= dt
 	if is_on_floor():
 		jumps = 0
-		coyote = 0.12
+		coyote = 0.16 if side_mode else 0.12
 	else:
 		coyote -= dt
 	if jump_buffer > 0 and (jumps < 2 or coyote > 0):
-		velocity.y = 9.5
+		velocity.y = 13.6 if side_mode else 9.5
 		if coyote <= 0 and jumps == 0:
 			jumps = 1
 		jumps += 1
@@ -453,13 +455,17 @@ func _physics_process(dt: float) -> void:
 			game.explode(global_position + Vector3.UP, 4.8, 130, Forge.EMBER, "burn", "КОМЕТА ПЛОТИ")
 			game.fx.column(global_position, Forge.EMBER, 5)
 	else:
-		velocity.x = move_toward(velocity.x, dir.x * speed, dt * 65)
+		velocity.x = move_toward(velocity.x, dir.x * speed, dt * (80 if side_mode else 65))
 		velocity.z = move_toward(velocity.z, dir.z * speed, dt * 65)
-		velocity.y -= 25 * dt
+		velocity.y -= (18.5 if side_mode else 25.0) * dt
 	move_and_slide()
 	if side_mode:
 		global_position.z = 0
 	var zlim = 22.0 if game.sector >= 9 else 9.0
+	if is_instance_valid(game.world):
+		var hw = game.world.half_width(game.sector)
+		if hw > 0.0:
+			zlim = maxf(1.5, hw - 0.55)
 	global_position.z = clampf(global_position.z, -zlim, zlim)
 	if game.phase == "hub" and global_position.y < -5:
 		game.enter_arena()

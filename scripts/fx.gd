@@ -51,7 +51,7 @@ func slash(origin: Vector3, forward: Vector3, color: Color, radius: float = 3.2)
 	for i in range(16):
 		var a = -1.05 + float(i) * 0.14
 		pts.append((forward * cos(a) + right * sin(a)) * radius)
-	var dust = _emitter(origin, color, 44, 0.3)
+	var dust = _emitter(origin, color, 56, 0.28)
 	dust.emission_shape = CPUParticles3D.EMISSION_SHAPE_POINTS
 	dust.emission_points = pts
 	dust.direction = forward
@@ -67,7 +67,26 @@ func slash(origin: Vector3, forward: Vector3, color: Color, radius: float = 3.2)
 	dust.restart()
 	dust.emitting = true
 	pieces.append({"node": dust, "velocity": Vector3.ZERO, "life": 0.42, "max": 0.42, "type": 4})
-	var sparks = _emitter(origin + forward * 0.35, color, 20, 0.22)
+	var sparks = _emitter(origin + forward * 0.35, color, 28, 0.2)
+	var gore = _emitter(origin, Forge.BLOOD, 18, 0.34)
+	gore.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	gore.emission_sphere_radius = 0.2
+	gore.direction = Vector3.UP
+	gore.spread = 80.0
+	gore.initial_velocity_min = 4.0
+	gore.initial_velocity_max = 12.0
+	gore.gravity = Vector3(0, -18, 0)
+	gore.scale_amount_min = 0.05
+	gore.scale_amount_max = 0.14
+	var drop = SphereMesh.new()
+	drop.radius = 0.05
+	drop.height = 0.1
+	drop.radial_segments = 6
+	drop.rings = 3
+	gore.mesh = drop
+	gore.restart()
+	gore.emitting = true
+	pieces.append({"node": gore, "velocity": Vector3.ZERO, "life": 0.4, "max": 0.4, "type": 4})
 	sparks.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
 	sparks.emission_sphere_radius = 0.16
 	sparks.direction = forward

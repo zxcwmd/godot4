@@ -6,7 +6,7 @@ const ProjectileScript = preload("res://scripts/projectile.gd")
 const FXScript = preload("res://scripts/fx.gd")
 const AudioScript = preload("res://scripts/audio.gd")
 const HUDScript = preload("res://scripts/hud.gd")
-const SECTOR_NAMES = ["МРАМОРНЫЙ ЗАЛ", "ТЕРМИНАЛ", "ЗОЛОТАЯ НАВЕСЬ", "ЧЁРНЫЙ СРЕЗ", "КРОВАВЫЙ ДВОР", "ПЕРЕГРУЗ", "ЯВЛЕНИЕ", "ПОГОНЯ", "ШТОРМ", "КЛЕТКА"]
+const SECTOR_NAMES = ["ЗОЛОТОЙ ЗЕВ", "КАМЕРА МЯСА", "МРАМОРНЫЙ ДВОР", "ГЛОТКА", "ПЛОЩАДЬ", "ЖЕЛУДОК", "ЯВЛЕНИЕ", "ПОГОНЯ", "ШТОРМ", "КЛЕТКА"]
 var player
 var world
 var fx
@@ -62,7 +62,7 @@ func _ready() -> void:
 	player.global_position = Vector3(-43, 0.1, 1.5)
 	side_camera = Camera3D.new()
 	side_camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	side_camera.size = 21
+	side_camera.size = 15.5
 	side_camera.far = 90
 	add_child(side_camera)
 	hud = HUDScript.new()
@@ -102,13 +102,13 @@ func _physics_process(dt: float) -> void:
 	if not is_instance_valid(player):
 		return
 	if player.side_mode:
-		var zoom = 21.0
+		var zoom = 15.5
 		if trans_t >= 0.5 and trans_to_side:
-			zoom = lerpf(32.0, 21.0, clampf((trans_t - 0.5) / 0.5, 0, 1))
+			zoom = lerpf(28.0, 15.5, clampf((trans_t - 0.5) / 0.5, 0, 1))
 		side_camera.size = zoom
-		var target = Vector3(player.global_position.x + 3.0, maxf(8.0, player.global_position.y + 6), 26)
-		side_camera.global_position = side_camera.global_position.lerp(target, minf(1, dt * 8))
-		side_camera.look_at(Vector3(side_camera.global_position.x, side_camera.global_position.y - 5.0, 0))
+		var target = Vector3(player.global_position.x + 1.6, player.global_position.y + 3.0, 20)
+		side_camera.global_position = side_camera.global_position.lerp(target, minf(1, dt * 10))
+		side_camera.look_at(Vector3(player.global_position.x + 1.6, player.global_position.y + 1.2, 0))
 	if phase not in ["run", "escape"]:
 		return
 	elapsed += dt
@@ -167,7 +167,7 @@ func enter_arena() -> void:
 	transition_flash = 0.5
 	shake = 0.5
 	activate_sector(0)
-	notify("01 / МРАМОРНЫЙ ЗАЛ — НЕ СТОЙ", world.pal.accent, 3)
+	notify("01 / ЗОЛОТОЙ ЗЕВ — НЕ СТОЙ", world.pal.accent, 3)
 	audio.play_sfx("seal", 0.7)
 
 func change_perspective() -> void:
@@ -186,9 +186,9 @@ func change_perspective() -> void:
 
 func _commit_perspective(side: bool) -> void:
 	if side:
-		side_camera.size = 28
-		side_camera.global_position = Vector3(player.global_position.x + 3, 8, 26)
-		side_camera.look_at(Vector3(player.global_position.x + 3, 3, 0))
+		side_camera.size = 15.5
+		side_camera.global_position = Vector3(player.global_position.x + 1.6, player.global_position.y + 3.0, 20)
+		side_camera.look_at(Vector3(player.global_position.x + 1.6, player.global_position.y + 1.2, 0))
 	player.set_side(side)
 	world.apply_palette(side, sector)
 	transition_flash = 0.25
@@ -208,7 +208,11 @@ func activate_sector(index: int) -> void:
 	var count = 7 + index
 	for i in range(count):
 		var x = index * 65 + 16 + (i % 5) * 8
-		var z = 0.0 if index % 2 == 1 else (-5.5 if i % 2 == 0 else 5.5)
+		var z = 0.0
+		if index % 2 != 1:
+			var hw = world.half_width(index)
+			var lane = minf(5.5, maxf(1.2, hw - 1.6))
+			z = -lane if i % 2 == 0 else lane
 		var kind = 0
 		if i % 3 == 1:
 			kind = 1

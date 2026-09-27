@@ -540,27 +540,31 @@ func melee(alt: bool) -> void:
 				push *= -2
 			enemy.take_damage(damage, push, "", weapon_name())
 			hit_count += 1
-			game.fx.burst(enemy.global_position + Vector3.UP, Forge.AMBER, 8, 6)
-			game.fx.beam(muzzle(), enemy.global_position + Vector3.UP, Forge.AMBER, 0.08)
+			game.fx.burst(enemy.global_position + Vector3.UP, Forge.BLOOD, 12, 7)
+			game.fx.burst(enemy.global_position + Vector3.UP, Forge.EMBER, 6, 5)
 	if weapon == 3 and hit_count > 0:
 		hp = minf(100, hp + 1.8 * hit_count)
 	if avatar.has_method("strike"):
 		avatar.strike()
-	game.fx.slash(muzzle(), aim, Forge.AMBER if weapon != 3 else Forge.EMBER, reach * 0.7)
-	game.fx.flash(muzzle() + aim * 0.4, Forge.WAX, 0.1)
+	game.fx.slash(muzzle(), aim, Forge.BLOOD if weapon != 3 else Forge.EMBER, reach * 0.7)
+	game.fx.flash(muzzle() + aim * 0.4, Forge.BLOOD, 0.12)
 	if weapon == 4 or alt:
-		game.fx.wave(global_position + Vector3.UP * 0.2, Forge.AMBER, reach)
-	game.audio.play_sfx("slash", 1.5 if weapon == 3 else 1)
+		game.fx.wave(global_position + Vector3.UP * 0.2, Forge.BLOOD, reach)
+	if hit_count > 0:
+		game.shake = maxf(game.shake, 0.2)
+	game.audio.play_sfx("slash", [0.82, 1.18, 0.68, 1.55, 0.52][weapon])
 
 func ranged(alt: bool) -> void:
 	var origin = muzzle()
 	var gold = Forge.AMBER
 	game.fx.flash(origin + aim * 0.2, gold, 0.16 if weapon != 5 else 0.08)
+	game.fx.burst(origin + Vector3(0, 0.1, 0), Forge.BONE, 4 if weapon != 5 else 2, 3)
 	match weapon:
 		0:
 			cooldown = 0.28 if not alt else 0.7
 			game.hitscan(origin, aim, 62 if not alt else 135, 85, gold, weapon_name(), false)
-			game.fx.burst(origin + aim * 0.3, Forge.WAX, 6, 3)
+			game.fx.burst(origin + aim * 0.3, Forge.WAX, 8, 4)
+			game.fx.beam(origin, origin + aim * 4, gold, 0.03, 0.08)
 		1:
 			cooldown = 0.38
 			game.spawn_projectile(origin, aim * 42, 60 if not alt else 95, true, gold, 0, "", weapon_name(), "disc", 4 if alt else 2)
@@ -568,11 +572,14 @@ func ranged(alt: bool) -> void:
 			cooldown = 0.9 if not alt else 1.2
 			game.hitscan(origin, aim, 155 if not alt else 270, 100, gold, weapon_name(), true)
 			game.fx.wave(origin, gold, 1.6)
+			game.fx.beam(origin, origin + aim * 12, Forge.CYAN, 0.12, 0.18)
+			game.shake = maxf(game.shake, 0.22)
 		3:
 			cooldown = 0.65
 			for i in range(9 if alt else 6):
 				var direction = (aim + Vector3(randf_range(-0.09, 0.09), randf_range(-0.08, 0.08), 0 if side_mode else randf_range(-0.09, 0.09))).normalized()
 				game.hitscan(origin, direction, 23, 28, gold, weapon_name(), false)
+			game.fx.burst(origin + aim * 0.4, Forge.AMBER, 14, 8)
 			if alt:
 				velocity -= aim * 12
 		4:
@@ -597,7 +604,7 @@ func ranged(alt: bool) -> void:
 			if alt:
 				var loft2 = (aim * 16 + Vector3.UP * 12 + aim.cross(Vector3.UP) * 0.4).normalized() * 24
 				game.spawn_projectile(origin, loft2, 70, true, Forge.EMBER, 3.2, "burn", weapon_name(), "bomb", 0, 22.0)
-	game.audio.play_sfx("shot", 0.65 if weapon == 2 else (1.4 if weapon == 5 else 1))
+	game.audio.play_sfx("shot", [1.12, 0.92, 0.52, 0.78, 1.05, 1.55, 0.7, 0.58][weapon])
 
 func cast(alt: bool) -> void:
 	if alt:

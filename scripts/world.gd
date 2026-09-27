@@ -15,6 +15,13 @@ var exit_ring: MeshInstance3D
 var exit_gate: MeshInstance3D
 var exit_sign: Label3D
 var accents = [Color("ffde00"), Color("d01018"), Color("f2ece0")]
+var arena_doors = {}
+var slammed = {}
+var crush: MeshInstance3D
+var crush_clock := 0.0
+var idol: Node3D
+var idol_t := -1.0
+var bridges: Array = []
 
 func side_sector(index: int) -> bool:
 	return index % 2 == 1 and index < 9
@@ -138,6 +145,8 @@ func build(owner_game) -> void:
 		build_sector(sector)
 	for i in range(3):
 		build_seal(i)
+	for x in [65.0, 195.0, 325.0]:
+		_arena_door(x)
 	build_exit()
 	apply_palette(false, 0)
 
@@ -165,12 +174,16 @@ func lamp(at: Vector3, role: String, energy: float, radius: float) -> void:
 	dye(light, role)
 	lights.append(light)
 
-func statue(at: Vector3, h: float = 8.0) -> void:
-	cyl(self, at + Vector3(0, h * 0.28, 0), 0.7, h * 0.55, "bone")
-	box(self, at + Vector3(0, h * 0.62, 0), Vector3(2.2, h * 0.28, 1.1), "wall")
-	orb(self, at + Vector3(0, h * 0.82, 0), 0.55, "bone", 0.0)
-	box(self, at + Vector3(0, h * 0.82, -0.5), Vector3(0.7, 0.12, 0.08), "accent", 1)
-	cyl(self, at + Vector3(0, h * 0.08, 0), 1.1, 0.2, "metal")
+func statue(at: Vector3, h: float = 8.0) -> Node3D:
+	var n = Node3D.new()
+	add_child(n)
+	n.position = at
+	cyl(n, Vector3(0, h * 0.28, 0), 0.7, h * 0.55, "bone")
+	box(n, Vector3(0, h * 0.62, 0), Vector3(2.2, h * 0.28, 1.1), "wall")
+	orb(n, Vector3(0, h * 0.82, 0), 0.55, "bone", 0.0)
+	box(n, Vector3(0, h * 0.82, -0.5), Vector3(0.7, 0.12, 0.08), "accent", 1)
+	cyl(n, Vector3(0, h * 0.08, 0), 1.1, 0.2, "metal")
+	return n
 
 func rib(at: Vector3, span: float = 5.0) -> void:
 	var bone = cyl(self, at, 0.12, span, "bone")
@@ -181,8 +194,31 @@ func rib(at: Vector3, span: float = 5.0) -> void:
 func boil(at: Vector3, r: float = 0.7) -> void:
 	orb(self, at, r, "glow" if r > 0.8 else "floor", 0.4 if r > 0.8 else 0.0)
 
-func ledge(x: float, y: float, w: float, thick: float = 0.35) -> void:
-	box(self, Vector3(x, y, 0), Vector3(w, thick, 3.2), "bone", 0, true)
+func ledge(x: float, y: float, w: float, thick: float = 0.35) -> MeshInstance3D:
+	return box(self, Vector3(x, y, 0), Vector3(w, thick, 3.2), "bone", 0, true)
+
+func _arena_door(x: float) -> void:
+	var g = box(self, Vector3(x, 4, 0), Vector3(0.4, 8, 20), "accent", 1, true)
+	arena_doors[x] = g
+
+func slam_back(index: int) -> void:
+	var x = index * 65.0
+	if arena_doors.has(x) and is_instance_valid(arena_doors[x]):
+		slammed[x] = true
+		_set_door(arena_doors[x], true)
+
+func open_front(index: int) -> void:
+	var x = (index + 1) * 65.0
+	if slammed.get(x, false):
+		return
+	if arena_doors.has(x) and is_instance_valid(arena_doors[x]):
+		_set_door(arena_doors[x], false)
+
+func _set_door(gate: MeshInstance3D, closed: bool) -> void:
+	gate.visible = closed
+	for child in gate.get_children():
+		if child is StaticBody3D:
+			child.collision_layer = 1 if closed else 0
 
 func build_hub() -> void:
 	box(self, Vector3(-36, -0.5, 0), Vector3(44, 1, 20), "dark", 0, true)
@@ -276,6 +312,8 @@ func _build_3d(index: int, start: float, center: float, s: String) -> void:
 		lamp(Vector3(center, 5.2, 0), "accent", 1.8, 14)
 		var mark = Forge.label(self, Vector3(center, 4.6, -hw + 0.4), "ЗЕВ", 72, col("accent"))
 		tag_label(mark, "accent")
+		if index == 0:
+			crush = box(self, Vector3(start + 46, 5.8, 0), Vector3(18, 0.5, 7.2), "metal")
 		return
 	if s == "mix":
 		# First third is a gold throat, then it dumps you into a plaza.
@@ -298,7 +336,10 @@ func _build_3d(index: int, start: float, center: float, s: String) -> void:
 	column(Vector3(start + 18, 0, 10), 12)
 	column(Vector3(start + 48, 0, -10), 12)
 	column(Vector3(start + 48, 0, 10), 12)
-	statue(Vector3(center, 0, -8), 10)
+	if index == 2:
+		idol = statue(Vector3(center, 0, 0), 10)
+	else:
+		statue(Vector3(center, 0, -8), 10)
 	banner(Vector3(center + 6, 4, -12.4), 7)
 	blood(Vector3(center, 0.07, 3), Vector3(6, 0.05, 2.4))
 	box(self, Vector3(center, 12.6, 0), Vector3(28, 0.2, 0.35), "metal")
@@ -326,6 +367,9 @@ func _build_2d(index: int, start: float, center: float, s: String) -> void:
 		var tight = Forge.label(self, Vector3(center, 7.2, -5.6), "ГЛОТКА", 110, col("accent"))
 		tight.modulate.a = 0.8
 		tag_label(tight, "accent")
+		if index == 7:
+			for i in range(4):
+				bridges.append(ledge(start + 10 + i * 12, 2.6, 7.5, 0.4))
 		return
 	# Room: stacked platforms, you jump. Spine floor stays so seals/tests don't fall.
 	ledge(start + 16, 2.4, 8)
@@ -442,3 +486,30 @@ func _process(dt: float) -> void:
 			node.rotate_y(dt * 0.7)
 	if is_instance_valid(exit_ring):
 		exit_ring.scale = Vector3.ONE * (1 + sin(Time.get_ticks_msec() * 0.003) * 0.04)
+	if not game or not is_instance_valid(game.player):
+		return
+	var px = game.player.global_position.x
+	if is_instance_valid(crush):
+		crush_clock += dt
+		crush.position.y = 5.5 + sin(crush_clock * 1.8) * 2.5
+		if absf(px - crush.position.x) < 9.0 and crush.position.y < 3.2 and game.player.global_position.y < crush.position.y + 0.4:
+			game.player.hurt(7)
+	if is_instance_valid(idol):
+		if idol_t < 0.0 and px > 148.0 and px < 195.0:
+			idol_t = 0.0
+			game.notify("ИДОЛ ПАДАЕТ — РЫВОК", pal.accent, 1.3)
+			game.audio.play_sfx("seal", 0.55)
+		if idol_t >= 0.0 and idol_t < 1.4:
+			idol_t += dt
+			idol.rotation.x = minf(idol_t * 1.1, 1.35)
+			if idol_t >= 1.35 and idol.get_child_count() > 0:
+				game.fx.burst(idol.global_position + Vector3(0, 1, 0), pal.metal, 18, 8)
+				game.shake = 0.55
+				idol_t = 1.5
+	for b in bridges:
+		if not is_instance_valid(b):
+			continue
+		if px > b.position.x - 2.0 and b.position.y > -8.0:
+			b.position.y -= dt * 9.0
+			if b.position.y < -1.0:
+				b.visible = false

@@ -27,6 +27,8 @@ var laser_t = 0.0
 var laser_angle = 0.0
 var laser_tick = 0.0
 var dual_laser = false
+var windup = 0.0
+var aim_t = 0.0
 
 func _ready() -> void:
 	add_to_group("enemies")
@@ -55,6 +57,9 @@ func _ready() -> void:
 	core = body.core
 	warning = Forge.ring(self, Vector3(0, 0.08, 0), 1.0, tint, 0.04)
 	warning.visible = false
+	if kind == 2:
+		var shield = Forge.ring(self, Vector3(0, 1.1, 0), 0.95, Forge.AMBER, 0.05)
+		shield.rotation.x = PI / 2
 
 func _physics_process(dt: float) -> void:
 	if dead or game.phase not in ["run", "escape"]:
@@ -96,6 +101,27 @@ func _physics_process(dt: float) -> void:
 			movement *= 0.15
 	if kind == 3:
 		movement *= 0.3
+	if windup > 0:
+		windup -= dt
+		movement *= 0.08
+		warning.visible = true
+		warning.scale = Vector3.ONE * (1.6 + (0.28 - windup) * 4.0)
+		if windup <= 0:
+			warning.visible = false
+			dash_t = 0.34
+			dash_dir = dir if dir.length() > 0.1 else Vector3.RIGHT
+			if body.has_method("strike"):
+				body.strike()
+	if aim_t > 0:
+		aim_t -= dt
+		movement *= 0.2
+		var origin = global_position + Vector3.UP * 1.3
+		var tip = origin + dir * 22
+		game.fx.beam(origin, tip, tint, 0.045, 0.05)
+		if aim_t <= 0:
+			shoot(to_player, 15)
+			if body.has_method("strike"):
+				body.strike()
 	if charge > 0:
 		charge -= dt
 		movement = Vector3.ZERO
@@ -131,17 +157,13 @@ func _physics_process(dt: float) -> void:
 	if _on_plane():
 		global_position.z = move_toward(global_position.z, 0, dt * 10)
 	_clamp_home()
-	if attack_timer <= 0 and frozen <= 0 and charge <= 0 and dash_t <= 0 and laser_t <= 0:
-		if kind == 0 and distance < 2.0:
-			game.player.hurt(10)
-			attack_timer = 0.9
-			if body.has_method("strike"):
-				body.strike()
+	if attack_timer <= 0 and frozen <= 0 and charge <= 0 and dash_t <= 0 and laser_t <= 0 and windup <= 0 and aim_t <= 0:
+		if kind == 0 and distance < 12.0:
+			windup = 0.28
+			attack_timer = 1.15
 		elif kind == 1 and distance < 28:
-			shoot(to_player, 15)
+			aim_t = 0.38
 			attack_timer = 1.7
-			if body.has_method("strike"):
-				body.strike()
 		elif kind == 2 and distance < 5:
 			charge = 0.9
 			attack_timer = 3.2

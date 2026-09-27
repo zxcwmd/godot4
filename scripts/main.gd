@@ -121,6 +121,7 @@ func _physics_process(dt: float) -> void:
 		sector = current
 		change_perspective()
 	activate_sector(sector)
+	_tick_arenas()
 	_tick_zones(dt)
 	for i in range(3):
 		if collected[i]:
@@ -199,6 +200,8 @@ func activate_sector(index: int) -> void:
 	if spawned.has(index):
 		return
 	spawned.append(index)
+	if index > 0:
+		world.slam_back(index)
 	if index == 6:
 		boss = spawn_enemy(Vector3(423, 0.2, 0), 3, 6)
 		notify("ДОБРОДЕТЕЛЬ / ЯВЛЕНИЕ", Color("d01018"), 3)
@@ -207,18 +210,31 @@ func activate_sector(index: int) -> void:
 		return
 	var count = 7 + index
 	for i in range(count):
-		var x = index * 65 + 16 + (i % 5) * 8
-		var z = 0.0
-		if index % 2 != 1:
-			var hw = world.half_width(index)
-			var lane = minf(5.5, maxf(1.2, hw - 1.6))
-			z = -lane if i % 2 == 0 else lane
 		var kind = 0
 		if i % 3 == 1:
 			kind = 1
 		if i % 5 == 4 and index > 0:
 			kind = 2
-		spawn_enemy(Vector3(x, 0.2, z), kind, index)
+		var x = index * 65 + 16 + (i % 5) * 8
+		if kind == 2:
+			x = index * 65 + 52
+		var z = 0.0
+		var y = 0.2
+		if index % 2 != 1:
+			var hw = world.half_width(index)
+			var lane = minf(5.5, maxf(1.2, hw - 1.6))
+			if kind == 1:
+				z = -lane
+			elif kind == 0:
+				z = -lane if i % 2 == 0 else lane
+			else:
+				z = 0.0
+		else:
+			if kind == 1:
+				y = 2.4
+			elif kind == 0:
+				z = 0.0
+		spawn_enemy(Vector3(x, y, z), kind, index)
 
 func spawn_enemy(at: Vector3, kind: int, section: int):
 	var enemy = EnemyScript.new()
@@ -229,6 +245,18 @@ func spawn_enemy(at: Vector3, kind: int, section: int):
 	enemy.global_position = at
 	fx.wave(at, Color("d01018"), 2)
 	return enemy
+
+func sector_enemies(index: int) -> int:
+	var count = 0
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if not enemy.dead and enemy.sector == index:
+			count += 1
+	return count
+
+func _tick_arenas() -> void:
+	for i in range(6):
+		if spawned.has(i) and sector_enemies(i) == 0:
+			world.open_front(i)
 
 func block_enemies(block: int) -> int:
 	var count = 0

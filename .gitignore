@@ -1,0 +1,9 @@
+.godot/
+*.tmp
+.DS_Store
+/export/
+/dist/
+assets/music/*.ogg
+assets/music/*.mp3
+assets/music/*.wav
+!assets/music/README.md

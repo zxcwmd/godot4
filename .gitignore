@@ -1,0 +1,6 @@
+.godot/
+exports/
+*.tmp
+.DS_Store
+assets/music/breakcore.ogg
+assets/music/breakcore.mp3

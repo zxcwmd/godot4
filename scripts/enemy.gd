@@ -1,6 +1,6 @@
 extends CharacterBody3D
 var game
-var kind = 0 # 0 rush, 1 gunner, 2 brute, 3 heart
+var kind = 0
 var sector = 0
 var hp = 70.0
 var max_hp = 70.0
@@ -12,7 +12,7 @@ var burn = 0.0
 var burn_timer = 0.0
 var age = 0.0
 var dead = false
-var tint = Color("ff6a4a")
+var tint = Color("e8302a")
 var body: Node3D
 var core: MeshInstance3D
 var warning: MeshInstance3D
@@ -37,7 +37,7 @@ func _ready() -> void:
 	capsule.height = 1.8 if kind < 2 else (2.6 if kind == 2 else 4.2)
 	var collision = CollisionShape3D.new()
 	collision.shape = capsule
-	collision.position.y = capsule.height / 2
+	collision.position.y = capsule.height / 2.0
 	add_child(collision)
 	match kind:
 		0:
@@ -47,7 +47,7 @@ func _ready() -> void:
 		2:
 			hp = 170; speed = 3.0; tint = Forge.COPPER
 		3:
-			hp = 2300; speed = 1.8; tint = Forge.EMBER
+			hp = 2300; speed = 1.8; tint = Forge.AMBER
 	max_hp = hp
 	body = Puppet.new()
 	add_child(body)
@@ -61,8 +61,8 @@ func _physics_process(dt: float) -> void:
 		return
 	age += dt
 	attack_timer -= dt
-	frozen = maxf(0, frozen-dt)
-	flash = maxf(0, flash-dt)
+	frozen = maxf(0, frozen - dt)
+	flash = maxf(0, flash - dt)
 	if is_instance_valid(core):
 		core.material_override = Forge.mat(Color.WHITE if flash > 0 else (Forge.BONE if frozen > 0 else tint), 1)
 	if lift > 0:
@@ -79,28 +79,32 @@ func _physics_process(dt: float) -> void:
 		if burn_timer <= 0:
 			burn_timer = 0.4
 			take_damage(8, Vector3.ZERO, "", "ГОРЕНИЕ")
-			if dead: return
+			if dead:
+				return
 	var to_player = game.player.global_position - global_position
 	var distance = to_player.length()
 	var dir = Vector3(to_player.x, 0, to_player.z).normalized()
-	if _on_plane(): dir.z = 0
+	if _on_plane():
+		dir.z = 0
 	if dir.length_squared() > 0.01:
 		body.rotation.y = lerp_angle(body.rotation.y, atan2(dir.x, dir.z), dt * 9)
 	var movement = dir * speed * (0.25 if frozen > 0 else 1.0)
 	if kind == 1:
-		if distance < 8: movement *= -0.5
-		elif distance < 16: movement *= 0.15
+		if distance < 8:
+			movement *= -0.5
+		elif distance < 16:
+			movement *= 0.15
 	if kind == 3:
 		movement *= 0.3
 	if charge > 0:
 		charge -= dt
 		movement = Vector3.ZERO
 		warning.visible = true
-		warning.scale = Vector3.ONE * (4.0 if kind == 2 else 9.0) * (1.0-charge/0.9)
+		warning.scale = Vector3.ONE * (4.0 if kind == 2 else 9.0) * (1.0 - charge / 0.9)
 		if charge <= 0:
 			warning.visible = false
 			var radius = 4.3 if kind == 2 else 9.5
-			game.fx.wave(global_position + Vector3.UP*0.12, tint, radius)
+			game.fx.wave(global_position + Vector3.UP * 0.12, tint, radius)
 			if distance < radius and game.player.global_position.y < global_position.y + 1.6:
 				game.player.hurt(22 if kind == 2 else 30)
 			game.shake = 0.3
@@ -118,26 +122,33 @@ func _physics_process(dt: float) -> void:
 		velocity.y = 12
 	else:
 		velocity.y -= 24 * dt
-	stagger = stagger.move_toward(Vector3.ZERO, dt*20)
-	if is_on_wall() and is_on_floor(): velocity.y = 8.5
+	stagger = stagger.move_toward(Vector3.ZERO, dt * 20)
+	if is_on_wall() and is_on_floor():
+		velocity.y = 8.5
 	move_and_slide()
 	if body.has_method("animate"):
 		body.animate(dt, velocity, is_on_floor(), kind == 0 and distance < 2.4, charge, frozen > 0, lift > 0)
 	if _on_plane():
-		global_position.z = move_toward(global_position.z, 0, dt*10)
+		global_position.z = move_toward(global_position.z, 0, dt * 10)
 	_clamp_home()
 	if attack_timer <= 0 and frozen <= 0 and charge <= 0 and dash_t <= 0 and laser_t <= 0:
 		if kind == 0 and distance < 2.0:
-			game.player.hurt(10); attack_timer = 0.9
-			if body.has_method("strike"): body.strike()
+			game.player.hurt(10)
+			attack_timer = 0.9
+			if body.has_method("strike"):
+				body.strike()
 		elif kind == 1 and distance < 28:
-			shoot(to_player, 15); attack_timer = 1.7
-			if body.has_method("strike"): body.strike()
+			shoot(to_player, 15)
+			attack_timer = 1.7
+			if body.has_method("strike"):
+				body.strike()
 		elif kind == 2 and distance < 5:
-			charge = 0.9; attack_timer = 3.2
-			if body.has_method("strike"): body.strike()
+			charge = 0.9
+			attack_timer = 3.2
+			if body.has_method("strike"):
+				body.strike()
 		elif kind == 3:
-			_boss_attack(to_player, dir, distance)
+			_boss_attack(dir)
 
 func _on_plane() -> bool:
 	return sector % 2 == 1 and sector < 9
@@ -148,13 +159,13 @@ func _clamp_home() -> void:
 			global_position.x = clampf(global_position.x, 588, 646)
 			global_position.z = clampf(global_position.z, -20, 20)
 		else:
-			global_position.x = clampf(global_position.x, sector*65.0+2, sector*65.0+62)
+			global_position.x = clampf(global_position.x, sector * 65.0 + 2, sector * 65.0 + 62)
 			global_position.z = clampf(global_position.z, -8.6, 8.6)
 		return
-	global_position.x = clampf(global_position.x, sector*65+2, sector*65+62)
+	global_position.x = clampf(global_position.x, sector * 65 + 2, sector * 65 + 62)
 	global_position.z = clampf(global_position.z, -8.6, 8.6)
 
-func _boss_attack(to_player: Vector3, dir: Vector3, distance: float) -> void:
+func _boss_attack(dir: Vector3) -> void:
 	boss_cycle += 1
 	attack_timer = 1.65 - stage * 0.18
 	if body.has_method("strike"):
@@ -173,12 +184,12 @@ func _boss_attack(to_player: Vector3, dir: Vector3, distance: float) -> void:
 				game.notify("РЫВОК ПО ПЛОСКОСТИ — ПРЫГАЙ", tint, 1.0)
 			else:
 				_rain()
-				game.notify("ДОЖДЬ ОСКОЛКОВ", tint, 1.0)
+				game.notify("ДОЖДЬ ЛЕПЕСТКОВ", tint, 1.0)
 		2:
 			if boss_cycle % 4 == 0:
 				game.spawn_enemy(global_position + Vector3(-4, 1, 3), 0, sector)
 				game.spawn_enemy(global_position + Vector3(-4, 1, -3), 0, sector)
-				game.notify("СТРАЖИ ПРИЛИВА", tint, 1.0)
+				game.notify("СТРАЖИ САДА", tint, 1.0)
 			elif boss_cycle % 2 == 0:
 				laser_t = 1.05
 				laser_angle = 0.0
@@ -193,7 +204,7 @@ func _boss_attack(to_player: Vector3, dir: Vector3, distance: float) -> void:
 				game.notify("КОЛЬЦО — ПРЫГАЙ", tint, 1.0)
 			elif pick == 1:
 				_pillars()
-				game.notify("СТОЛПЫ ЯДРА", tint, 1.0)
+				game.notify("СТОЛПЫ ЦВЕТКА", tint, 1.0)
 			elif pick == 2:
 				laser_t = 1.25
 				laser_angle = 0.4
@@ -203,12 +214,12 @@ func _boss_attack(to_player: Vector3, dir: Vector3, distance: float) -> void:
 				_fan(0.28, 6, 16, 13)
 
 func _fan(spread: float, count: int, shot_speed: float, dmg: float) -> void:
-	var origin = global_position + Vector3.UP*2.3
+	var origin = global_position + Vector3.UP * 2.3
 	var aim = (game.player.global_position + Vector3.UP - origin).normalized()
 	var mid = (count - 1) * 0.5
 	for i in range(count):
 		var ang = (float(i) - mid) * spread
-		game.spawn_projectile(origin, aim.rotated(Vector3.UP, ang)*shot_speed, dmg, false, tint)
+		game.spawn_projectile(origin, aim.rotated(Vector3.UP, ang) * shot_speed, dmg, false, tint)
 
 func _rain() -> void:
 	var px = game.player.global_position.x
@@ -246,11 +257,11 @@ func _near_segment(point: Vector3, a: Vector3, b: Vector3, radius: float) -> boo
 	return point.distance_to(a + ab * t) <= radius
 
 func shoot(_direction: Vector3, projectile_speed: float) -> void:
-	var origin = global_position + Vector3.UP*1.3
-	var aim = (game.player.global_position + Vector3.UP*0.9 - origin).normalized()
-	var hit = get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin, game.player.global_position+Vector3.UP, 1))
+	var origin = global_position + Vector3.UP * 1.3
+	var aim = (game.player.global_position + Vector3.UP * 0.9 - origin).normalized()
+	var hit = get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin, game.player.global_position + Vector3.UP, 1))
 	if hit.is_empty():
-		game.spawn_projectile(origin, aim*projectile_speed, 12, false, tint)
+		game.spawn_projectile(origin, aim * projectile_speed, 12, false, tint)
 
 func _advance_stage() -> void:
 	if stage >= 3:
@@ -263,7 +274,7 @@ func _advance_stage() -> void:
 	global_position = dest
 	game.fx.slash(dest + Vector3.UP * 2, Vector3.RIGHT, tint, 5)
 	game.world.open_boss_gate(stage - 1)
-	var titles = ["ЯВЛЕНИЕ", "ПОГОНЯ / 2D", "ШТОРМ / 3D", "КВАДРАТ ЯДРА"]
+	var titles = ["ЯВЛЕНИЕ", "ПОГОНЯ / 2D", "ШТОРМ / 3D", "КВАДРАТ ЦВЕТКА"]
 	game.notify("ОНО УХОДИТ — " + titles[stage], tint, 2.4)
 	attack_timer = 1.1
 	charge = 0.0
@@ -271,22 +282,28 @@ func _advance_stage() -> void:
 	laser_t = 0.0
 
 func take_damage(amount: float, push: Vector3 = Vector3.ZERO, status: String = "", weapon: String = "") -> void:
-	if dead: return
+	if dead:
+		return
 	hp -= amount
 	flash = 0.09
 	if body.has_method("flinch_hit"):
 		body.flinch_hit()
 	stagger += push * (0.2 if kind == 3 else 1.0)
-	if status == "freeze": frozen = 2.5 if kind < 3 else 0.65
-	if status == "burn": burn = 3.0
+	if status == "freeze":
+		frozen = 2.5 if kind < 3 else 0.65
+	if status == "burn":
+		burn = 3.0
 	game.hit_marker = 0.14
-	game.fx.burst(global_position+Vector3.UP, tint, 5, 4)
+	game.fx.burst(global_position + Vector3.UP, tint, 5, 4)
 	game.audio.play_sfx("hit")
 	if kind == 3 and hp > 0:
 		var want = 0
-		if hp < max_hp * 0.75: want = 1
-		if hp < max_hp * 0.50: want = 2
-		if hp < max_hp * 0.25: want = 3
+		if hp < max_hp * 0.75:
+			want = 1
+		if hp < max_hp * 0.50:
+			want = 2
+		if hp < max_hp * 0.25:
+			want = 3
 		while stage < want:
 			_advance_stage()
 	if hp <= 0:

@@ -14,7 +14,7 @@ var pal_sector = 0
 var exit_ring: MeshInstance3D
 var exit_gate: MeshInstance3D
 var exit_sign: Label3D
-var accents = [Color("ff7a45"), Color("7dffc3"), Color("4ad4ff")]
+var accents = [Color("e8302a"), Color("f2c44a"), Color("3a8a48")]
 
 func side_sector(index: int) -> bool:
 	return index % 2 == 1 and index < 9
@@ -22,21 +22,21 @@ func side_sector(index: int) -> bool:
 func make_palette(side: bool, sector: int) -> Dictionary:
 	var block := clampi(int(sector) >> 1, 0, 4)
 	if side:
-		var acc = [Color("4ad4ff"), Color("ff6a4a"), Color("7dffc3"), Color("ffd08a"), Color("c8fff0")][block]
-		var glo = [Color("7dffc3"), Color("4ad4ff"), Color("ff7a45"), Color("ff6a4a"), Color("4ad4ff")][block]
+		var acc = [Color("ff3a2a"), Color("f2c44a"), Color("6ad08a"), Color("ff7a40"), Color("f4ece0")][block]
+		var glo = [Color("f2c44a"), Color("ff3a2a"), Color("f2c44a"), Color("6ad08a"), Color("ff3a2a")][block]
 		return {
-			"dark": Color("050814"), "floor": Color("0c1630"), "wall": Color("152448"),
-			"metal": Color("6a88b0"), "accent": acc, "glow": glo, "bone": Color("e8f4ff"),
-			"fog": Color("070b18"), "bg": Color("02040c"), "sun": Color("80e8ff"),
-			"ambient": Color("3a58a0"), "glass": Color(0.35, 0.75, 1.0, 0.22)
+			"dark": Color("05040a"), "floor": Color("0c0814"), "wall": Color("140c1c"),
+			"metal": Color("c8b090"), "accent": acc, "glow": glo, "bone": Color("faf4ea"),
+			"fog": Color("080610"), "bg": Color("030208"), "sun": Color("ff8060"),
+			"ambient": Color("5a2040"), "glass": Color(0.9, 0.2, 0.18, 0.22)
 		}
-	var acc2 = [Color("ff7a45"), Color("7dffc3"), Color("4ad4ff"), Color("ffd08a"), Color("ff6a4a")][block]
-	var glo2 = [Color("7dffc3"), Color("ffd08a"), Color("ff7a45"), Color("4ad4ff"), Color("7dffc3")][block]
+	var acc2 = [Color("e8302a"), Color("3a8a48"), Color("f2c44a"), Color("ff7a40"), Color("e8302a")][block]
+	var glo2 = [Color("f2c44a"), Color("e8302a"), Color("6ad08a"), Color("f2c44a"), Color("ff5a28")][block]
 	return {
-		"dark": Color("071014"), "floor": Color("1a333c"), "wall": Color("c5d6cc"),
-		"metal": Color("2f8f7a"), "accent": acc2, "glow": glo2, "bone": Color("e8f4ef"),
-		"fog": Color("123038"), "bg": Color("071014"), "sun": Color("ffe0b0"),
-		"ambient": Color("5a9088"), "glass": Color(0.55, 0.95, 0.85, 0.2)
+		"dark": Color("0a080c"), "floor": Color("1a1210"), "wall": Color("2a1c16"),
+		"metal": Color("8a5a28"), "accent": acc2, "glow": glo2, "bone": Color("f4ece0"),
+		"fog": Color("120c14"), "bg": Color("08060c"), "sun": Color("f0a878"),
+		"ambient": Color("6a4050"), "glass": Color(0.9, 0.25, 0.2, 0.2)
 	}
 
 func dye(node: Node, role: String) -> Node:
@@ -79,7 +79,7 @@ func apply_palette(side: bool, sector: int) -> void:
 			if p.r == "accent" or p.r == "glow":
 				glow = 1.0
 			elif p.r == "glass":
-				glow = 0.45
+				glow = 0.5
 			p.n.material_override = Forge.mat(c, glow)
 	if env:
 		env.background_color = pal.bg
@@ -97,21 +97,21 @@ func build(owner_game) -> void:
 	env.background_color = pal.bg
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = pal.ambient
-	env.ambient_light_energy = 0.62
+	env.ambient_light_energy = 0.58
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.fog_enabled = true
 	env.fog_light_color = pal.fog
-	env.fog_density = 0.014
-	env.fog_light_energy = 0.9
+	env.fog_density = 0.016
+	env.fog_light_energy = 0.85
 	env.glow_enabled = true
-	env.glow_intensity = 0.42
-	env.glow_bloom = 0.12
+	env.glow_intensity = 0.4
+	env.glow_bloom = 0.1
 	environment.environment = env
 	add_child(environment)
 	sun = DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-54, -18, 0)
+	sun.rotation_degrees = Vector3(-42, 22, 0)
 	sun.light_color = pal.sun
-	sun.light_energy = 1.15
+	sun.light_energy = 1.05
 	add_child(sun)
 	build_hub()
 	for sector in range(10):
@@ -121,24 +121,31 @@ func build(owner_game) -> void:
 	build_exit()
 	apply_palette(false, 0)
 
-func pillar(at: Vector3, height: float = 8.0) -> void:
-	cyl(self, at + Vector3(0, height * 0.5, 0), 0.34, height, "wall")
-	box(self, at + Vector3(0, height * 0.5, 0), Vector3(0.92, height, 0.2), "metal")
-	box(self, at + Vector3(0, height * 0.5, 0), Vector3(0.2, height, 0.92), "metal")
-	box(self, at + Vector3(0, 0.1, 0), Vector3(1.35, 0.2, 1.35), "floor")
-	box(self, at + Vector3(0, height, 0), Vector3(1.05, 0.14, 1.05), "metal")
-	orb(self, at + Vector3(0, height + 0.26, 0), 0.2, "glow", 1.1)
+func post(at: Vector3, height: float = 8.0) -> void:
+	box(self, at + Vector3(0, height * 0.5, 0), Vector3(0.42, height, 0.42), "wall")
+	box(self, at + Vector3(0, height * 0.5, 0), Vector3(0.18, height, 0.18), "dark")
+	box(self, at + Vector3(0, 0.12, 0), Vector3(0.7, 0.24, 0.7), "metal")
+	box(self, at + Vector3(0, height, 0), Vector3(0.85, 0.14, 0.85), "metal")
+	orb(self, at + Vector3(0, height + 0.28, 0), 0.18, "glow", 1.1)
 
 func lantern(at: Vector3) -> void:
-	box(self, at, Vector3(0.16, 0.7, 0.16), "metal")
-	box(self, at + Vector3(0, 0.42, 0), Vector3(0.48, 0.07, 0.48), "metal")
-	var fire = orb(self, at + Vector3(0, 0.7, 0), 0.2, "glow", 1.25)
-	rotators.append(fire)
-	lamp(at + Vector3(0, 0.82, 0), "glow", 3.2, 11)
+	box(self, at, Vector3(0.08, 1.1, 0.08), "metal")
+	var paper = orb(self, at + Vector3(0, 1.15, 0), 0.28, "accent", 1.15)
+	rotators.append(paper)
+	orb(self, at + Vector3(0, 1.15, 0), 0.12, "glow", 1.4)
+	lamp(at + Vector3(0, 1.2, 0), "glow", 3.0, 10)
 
-func banner(at: Vector3, tall: float = 3.4) -> void:
-	box(self, at + Vector3(0, tall, 0), Vector3(0.16, 0.08, 1.35), "metal")
-	box(self, at + Vector3(0, tall * 0.5, 0), Vector3(0.06, tall, 1.15), "accent", 0.55)
+func arch(at: Vector3, tall: float = 7.0) -> void:
+	post(at + Vector3(0, 0, -1.6), tall)
+	post(at + Vector3(0, 0, 1.6), tall)
+	box(self, at + Vector3(0, tall + 0.15, 0), Vector3(0.4, 0.28, 4.0), "metal")
+	box(self, at + Vector3(0, tall * 0.55, 0), Vector3(0.06, tall * 0.7, 2.4), "accent", 0.6)
+
+func blossom(at: Vector3) -> void:
+	for i in range(5):
+		var a = float(i) * TAU / 5.0
+		orb(self, at + Vector3(cos(a) * 0.22, 0.05, sin(a) * 0.22), 0.09, "glow" if i % 2 == 0 else "bone", 0.8)
+	orb(self, at, 0.08, "accent", 1.0)
 
 func lamp(at: Vector3, role: String, energy: float, radius: float) -> void:
 	var light = OmniLight3D.new()
@@ -156,30 +163,28 @@ func build_hub() -> void:
 	box(self, Vector3(-58, 6, 0), Vector3(1, 12, 20), "dark", 0, true)
 	for z in [-10, 10]:
 		box(self, Vector3(-29, 4, z), Vector3(58, 8, 0.7), "wall", 0, true)
-		box(self, Vector3(-29, 0.04, z * 0.88), Vector3(56, 0.08, 0.18), "glow", 0.8)
-		box(self, Vector3(-29, 7.4, z * 0.92), Vector3(54, 0.08, 0.12), "glass", 0.4)
+		box(self, Vector3(-29, 0.05, z * 0.88), Vector3(56, 0.06, 0.16), "accent", 0.7)
 		for x in range(-54, 0, 8):
-			pillar(Vector3(x, 0, z * 0.82), 7.5)
+			post(Vector3(x, 0, z * 0.82), 7.4)
 	for x in range(-54, -14, 6):
-		box(self, Vector3(x, 0.02, 0), Vector3(0.7, 0.05, 14), "glow", 0.35)
-		box(self, Vector3(x + 3, 0.03, 0), Vector3(2.0, 0.04, 2.0), "accent", 0.4)
+		box(self, Vector3(x, 0.03, 0), Vector3(0.5, 0.04, 12), "glow", 0.3)
+		blossom(Vector3(x + 3, 0.2, 0))
 	for i in range(3):
 		var x = -36 + i * 8
-		box(self, Vector3(x, 0.55, -5), Vector3(2.6, 1.1, 2.6), "metal", 0, true)
-		box(self, Vector3(x, 1.15, -5), Vector3(1.8, 0.12, 1.8), "accent", 0.9)
-		pillar(Vector3(x - 1.5, 0, -6.3), 3.0)
-		pillar(Vector3(x + 1.5, 0, -6.3), 3.0)
-		var core = orb(self, Vector3(x, 2.7, -5), 0.55, "glow")
+		box(self, Vector3(x, 0.5, -5), Vector3(2.4, 1.0, 2.4), "metal", 0, true)
+		box(self, Vector3(x, 1.05, -5), Vector3(1.7, 0.1, 1.7), "accent", 0.9)
+		arch(Vector3(x, 0, -5.2), 3.2)
+		var core = orb(self, Vector3(x, 2.6, -5), 0.48, "glow")
 		rotators.append(core)
-		var halo = ring(self, Vector3(x, 2.7, -5), 1.05, "accent")
-		halo.rotation_degrees.x = 78
+		var halo = ring(self, Vector3(x, 2.6, -5), 0.95, "accent")
+		halo.rotation_degrees.x = 80
 		rotators.append(halo)
-		banner(Vector3(x, 1.4, -6.6), 2.4)
-		var text = Forge.label(self, Vector3(x, 4.5, -5), ["01 / КЛИНОК", "02 / БАЛЛИСТ", "03 / АРКАНИСТ"][i], 38, col("accent"))
+		lantern(Vector3(x, 0.2, -6.8))
+		var text = Forge.label(self, Vector3(x, 4.4, -5), ["01 / КЛИНОК", "02 / БАЛЛИСТ", "03 / АРКАНИСТ"][i], 38, col("accent"))
 		text.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		tag_label(text, "accent")
-		lamp(Vector3(x, 3.2, -5), "glow", 3.0, 10)
-	var signage = Forge.label(self, Vector3(-5, 5, 0), "ВНИЗ — ЗНАЧИТ ВПЕРЁД\n↓   ВХОД В ПРИЛИВ   ↓", 58, col("accent"))
+		lamp(Vector3(x, 3.1, -5), "glow", 2.8, 10)
+	var signage = Forge.label(self, Vector3(-5, 5, 0), "ВНИЗ — ЗНАЧИТ ВПЕРЁД\n↓   ВХОД В САД   ↓", 58, col("accent"))
 	signage.rotation.y = -PI / 2
 	tag_label(signage, "accent")
 	box(self, Vector3(-14.3, 0.04, 0), Vector3(0.3, 0.1, 20), "accent", 1)
@@ -187,15 +192,15 @@ func build_hub() -> void:
 	for z in [-10, 10]:
 		box(self, Vector3(-7, -8, z), Vector3(14, 16, 0.6), "wall", 0, true)
 		box(self, Vector3(-7, -8, z * 0.92), Vector3(13, 16, 0.08), "glass", 0.5)
-	lamp(Vector3(-7, -2, 0), "glow", 4.2, 16)
+	lamp(Vector3(-7, -2, 0), "glow", 4.0, 16)
 	for y in range(-12, 0, 2):
 		rotators.append(ring(self, Vector3(-7, y, 0), 5.0, "accent" if y % 4 == 0 else "glow", 0.08))
 	for x in [-29, -25, -21, -17]:
 		var arrow = Forge.label(self, Vector3(x, 0.04, 0), "»", 80, col("accent"))
 		arrow.rotation_degrees = Vector3(-90, 0, -90)
 		tag_label(arrow, "accent")
-	lantern(Vector3(-48, 0.3, 6))
-	lantern(Vector3(-48, 0.3, -6))
+	lantern(Vector3(-48, 0.2, 6))
+	lantern(Vector3(-48, 0.2, -6))
 
 func build_sector(index: int) -> void:
 	if index == 9:
@@ -204,41 +209,38 @@ func build_sector(index: int) -> void:
 	var start = index * 65.0
 	var center = start + 32.5
 	var side = side_sector(index)
-	var wide = 20.0
-	box(self, Vector3(center, -0.6, 0), Vector3(65, 1.2, wide), "floor", 0, true)
+	box(self, Vector3(center, -0.6, 0), Vector3(65, 1.2, 20), "floor", 0, true)
 	for z in [-10, 10]:
 		if side and z == 10:
 			continue
 		box(self, Vector3(center, 6, z), Vector3(65, 12, 0.6), "wall", 0, true)
-		box(self, Vector3(center, 2.2, z * 0.96), Vector3(65, 0.08, 0.12), "accent", 0.7)
-		box(self, Vector3(center, 8.4, z * 0.96), Vector3(65, 0.1, 0.1), "glass", 0.4)
+		box(self, Vector3(center, 2.0, z * 0.96), Vector3(65, 0.08, 0.1), "accent", 0.65)
+		box(self, Vector3(center, 8.2, z * 0.96), Vector3(65, 0.08, 0.1), "glass", 0.4)
 		for x in range(int(start) + 4, int(start) + 65, 10):
-			pillar(Vector3(x, 0, z * 0.78), 8.5)
-			banner(Vector3(x + 4, 5.2, z * 0.94), 2.8)
+			post(Vector3(x, 0, z * 0.78), 8.2)
+			blossom(Vector3(x + 4, 0.18, z * 0.7))
 	for x in range(int(start), int(start) + 65, 8):
-		box(self, Vector3(x, 0.03, 0), Vector3(1.6, 0.04, 1.6), "accent", 0.3)
-		box(self, Vector3(x + 4, 0.02, 0), Vector3(0.55, 0.04, 14), "glow", 0.25)
-	lamp(Vector3(center, 7.2, 0), "glow", 2.2, 20)
+		box(self, Vector3(x, 0.03, 0), Vector3(1.4, 0.04, 1.4), "accent", 0.28)
+		box(self, Vector3(x + 4, 0.02, 0), Vector3(0.45, 0.03, 12), "glow", 0.22)
+	lamp(Vector3(center, 7.0, 0), "glow", 2.1, 20)
 	if not side:
-		for x in range(int(start) + 5, int(start) + 65, 15):
-			box(self, Vector3(x, 11.2, 0), Vector3(0.2, 0.12, 16), "metal")
-			box(self, Vector3(x, 9.4, 0), Vector3(0.08, 3.4, 3.6), "glass", 0.4)
+		for x in range(int(start) + 8, int(start) + 65, 16):
+			arch(Vector3(x, 0, 0), 6.5)
 		for offset in [23, 43]:
-			var z = -5 if offset == 23 else 5
-			lantern(Vector3(start + offset, 0.3, z))
+			lantern(Vector3(start + offset, 0.2, -5 if offset == 23 else 5))
 	else:
 		for offset in [19, 38]:
-			box(self, Vector3(start + offset, 0.55, 0), Vector3(2.2, 1.1, 4.6), "metal", 0, true)
-			box(self, Vector3(start + offset, 1.15, 0), Vector3(2.2, 0.08, 4.6), "accent", 0.8)
+			box(self, Vector3(start + offset, 0.5, 0), Vector3(2.0, 1.0, 4.4), "metal", 0, true)
+			box(self, Vector3(start + offset, 1.05, 0), Vector3(2.0, 0.08, 4.4), "accent", 0.8)
 		var titles = ["", "01 / СДВИГ", "", "02 / РАЗРЫВ", "", "03 / ПЕРЕГРУЗ", "", "ПОГОНЯ"]
-		var huge = Forge.label(self, Vector3(center, 6.2, -9.6), titles[index] if index < titles.size() else "ПРИЛИВ", 130, col("accent"))
-		huge.modulate.a = 0.55
+		var huge = Forge.label(self, Vector3(center, 6.2, -9.6), titles[index] if index < titles.size() else "САД", 130, col("accent"))
+		huge.modulate.a = 0.5
 		tag_label(huge, "accent")
 	if index > 0:
-		pillar(Vector3(start, 0, -8), 8)
-		pillar(Vector3(start, 0, 8), 8)
-		box(self, Vector3(start, 8.2, 0), Vector3(0.8, 0.4, 16), "metal")
-		var signage = Forge.label(self, Vector3(start - 0.2, 6.6, 0), "СДВИГ / 2D" if side else "ВОЗВРАТ / 3D", 54, col("accent"))
+		post(Vector3(start, 0, -8), 8)
+		post(Vector3(start, 0, 8), 8)
+		box(self, Vector3(start, 8.0, 0), Vector3(0.5, 0.3, 16), "metal")
+		var signage = Forge.label(self, Vector3(start - 0.2, 6.5, 0), "СДВИГ / 2D" if side else "ВОЗВРАТ / 3D", 54, col("accent"))
 		signage.rotation.y = -PI / 2
 		tag_label(signage, "accent")
 	if index in [7, 8]:
@@ -255,37 +257,35 @@ func build_arena() -> void:
 	box(self, Vector3(650, 6, 17), Vector3(0.7, 12, 14), "wall", 0, true)
 	for z in [-24, 24]:
 		box(self, Vector3(center.x, 6, z), Vector3(65, 12, 0.7), "wall", 0, true)
-		box(self, Vector3(center.x, 1.2, z * 0.96), Vector3(60, 0.1, 0.14), "accent", 0.7)
+		box(self, Vector3(center.x, 1.1, z * 0.96), Vector3(60, 0.1, 0.12), "accent", 0.7)
 	for x in [-1.0, 1.0]:
 		for z in [-1.0, 1.0]:
-			pillar(center + Vector3(x * 18, 0, z * 16), 9)
-			lantern(center + Vector3(x * 10, 0.3, z * 10))
-	for i in range(4):
-		var a = float(i) * TAU / 4.0
-		banner(center + Vector3(cos(a) * 14, 2.0, sin(a) * 14), 4.0)
-	var core = ring(self, center + Vector3(0, 0.08, 0), 6.5, "accent", 0.1)
+			post(center + Vector3(x * 18, 0, z * 16), 9)
+			lantern(center + Vector3(x * 10, 0.2, z * 10))
+	for i in range(6):
+		var a = float(i) * TAU / 6.0
+		blossom(center + Vector3(cos(a) * 8, 0.2, sin(a) * 8))
+	var core = ring(self, center + Vector3(0, 0.08, 0), 6.2, "accent", 0.1)
 	core.rotation.x = PI / 2
-	rotators.append(ring(self, center + Vector3(0, 4.5, 0), 4.2, "glow", 0.08))
+	rotators.append(ring(self, center + Vector3(0, 4.2, 0), 4.0, "glow", 0.08))
 	lamp(center + Vector3(0, 9, 0), "glow", 5.0, 24)
-	var title = Forge.label(self, center + Vector3(0, 8.4, -22), "КВАДРАТ ЯДРА", 92, col("accent"))
+	var title = Forge.label(self, center + Vector3(0, 8.2, -22), "КВАДРАТ ЦВЕТКА", 92, col("accent"))
 	tag_label(title, "accent")
 	var g = box(self, Vector3(start, 6, 0), Vector3(0.45, 12, 48), "accent", 1, true)
 	boss_gates.append(g)
-	box(self, Vector3(center.x, 11.5, 0), Vector3(0.12, 0.12, 40), "glass", 0.4)
-	box(self, Vector3(center.x, 11.5, 0), Vector3(40, 0.12, 0.12), "glass", 0.4)
 
 func build_seal(index: int) -> void:
 	var x = 122.0 + index * 130.0
 	var node = Node3D.new()
 	add_child(node)
 	node.position = Vector3(x, 2.3, 0)
-	var core = box(node, Vector3.ZERO, Vector3(1.05, 1.05, 1.05), "glow", 1)
-	core.rotation_degrees = Vector3(45, 25, 45)
+	var core = box(node, Vector3.ZERO, Vector3(1.0, 1.0, 1.0), "glow", 1)
+	core.rotation_degrees = Vector3(45, 30, 45)
 	rotators.append(core)
-	var halo = ring(node, Vector3.ZERO, 1.5, "accent")
+	var halo = ring(node, Vector3.ZERO, 1.45, "accent")
 	halo.rotation.x = PI / 2
 	rotators.append(halo)
-	var caption = Forge.label(node, Vector3(0, 2.6, 0), "ПЕЧАТЬ / 0" + str(index + 1), 38, col("accent"))
+	var caption = Forge.label(node, Vector3(0, 2.5, 0), "ПЕЧАТЬ / 0" + str(index + 1), 38, col("accent"))
 	caption.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	tag_label(caption, "accent")
 	seals.append(node)
@@ -294,8 +294,8 @@ func build_seal(index: int) -> void:
 	for z in range(-9, 10, 2):
 		box(gate, Vector3(-0.01, 0, z), Vector3(0.08, 8, 0.06), "glow", 1)
 	gates.append(gate)
-	pillar(Vector3(x + 6, 0, -8.5), 8)
-	pillar(Vector3(x + 6, 0, 8.5), 8)
+	post(Vector3(x + 6, 0, -8.5), 8)
+	post(Vector3(x + 6, 0, 8.5), 8)
 
 func open_seal(index: int) -> void:
 	seals[index].hide()
@@ -324,19 +324,19 @@ func build_exit() -> void:
 		box(self, Vector3(672.5, 5, z), Vector3(45, 10, 0.6), "wall", 0, true)
 		box(self, Vector3(672, 1, z * 0.96), Vector3(44, 0.1, 0.12), "glow", 0.7)
 	for x in range(655, 690, 9):
-		pillar(Vector3(x, 0, -7), 7)
-		pillar(Vector3(x, 0, 7), 7)
+		post(Vector3(x, 0, -7), 7)
+		post(Vector3(x, 0, 7), 7)
 	exit_gate = box(self, Vector3(652, 4, 0), Vector3(0.35, 8, 20), "glow", 1, true)
-	exit_sign = Forge.label(self, Vector3(651, 6, 0), "ЯДРО УДЕРЖИВАЕТ ВЫХОД", 36, col("glow"))
+	exit_sign = Forge.label(self, Vector3(651, 6, 0), "ЦВЕТОК УДЕРЖИВАЕТ ВЫХОД", 36, col("glow"))
 	exit_sign.rotation.y = -PI / 2
 	tag_label(exit_sign, "glow")
 	exit_ring = ring(self, Vector3(682, 3, 0), 2.7, "accent", 0.16)
 	exit_ring.rotation.z = PI / 2
-	var signage = Forge.label(self, Vector3(684, 7.4, 0), "РАЗОРВИ ПРИЛИВ", 72, col("accent"))
+	var signage = Forge.label(self, Vector3(684, 7.4, 0), "РАЗОРВИ САД", 72, col("accent"))
 	signage.rotation.y = -PI / 2
 	tag_label(signage, "accent")
-	lantern(Vector3(668, 0.3, -6))
-	lantern(Vector3(668, 0.3, 6))
+	lantern(Vector3(668, 0.2, -6))
+	lantern(Vector3(668, 0.2, 6))
 
 func unlock_exit() -> void:
 	for i in range(boss_gates.size()):
@@ -351,6 +351,6 @@ func unlock_exit() -> void:
 func _process(dt: float) -> void:
 	for node in rotators:
 		if is_instance_valid(node):
-			node.rotate_y(dt * 0.5)
+			node.rotate_y(dt * 0.55)
 	if is_instance_valid(exit_ring):
 		exit_ring.scale = Vector3.ONE * (1 + sin(Time.get_ticks_msec() * 0.003) * 0.04)

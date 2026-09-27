@@ -176,7 +176,7 @@ func _view_arms() -> void:
 
 func _wrap(parent: Node3D, at: Vector3, length: float) -> void:
 	for i in range(5):
-		Forge.box(parent, at + Vector3(0, -length * 0.4 + i * length * 0.18, 0.04), Vector3(0.07, 0.03, 0.02), Forge.BLOOD if i % 2 == 0 else Forge.BONE)
+		Forge.box(parent, at + Vector3(0, -length * 0.4 + i * length * 0.18, 0.04), Vector3(0.07, 0.03, 0.02), Forge.AMBER if i % 2 == 0 else Forge.WAX)
 
 func _katana() -> void:
 	var sword = Node3D.new()

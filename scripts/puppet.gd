@@ -1,6 +1,6 @@
 class_name Puppet
 extends Node3D
-## Articulated character: pivots + meshes, posed every physics frame.
+## Articulated paper-warden: pivots plus meshes, posed every physics frame.
 
 const PLAYER := -1
 const RUSH := 0
@@ -31,7 +31,7 @@ func build(role: int, accent: Color) -> void:
 	kind = role
 	tint = accent
 	scale_mul = 1.35 if role == BRUTE else (0.96 if role == RUSH else 1.0)
-	rest_hunch = 0.45 if role == RUSH else (0.12 if role == BRUTE else 0.08)
+	rest_hunch = 0.4 if role == RUSH else (0.1 if role == BRUTE else 0.06)
 	if role == HEART:
 		_build_heart()
 		return
@@ -52,61 +52,58 @@ func _cyl(parent: Node3D, at: Vector3, radius: float, height: float, color: Colo
 
 func _build_humanoid(is_player: bool) -> void:
 	var s = scale_mul
-	var plate = Forge.STONE
-	var chalk = Forge.BONE
-	var metal = Forge.BRONZE
-	var cloth = Forge.BLOOD if kind == RUSH else (Forge.STONE if kind == BRUTE else Forge.COPPER)
-	if is_player:
-		cloth = Forge.BRONZE
+	var wood = Forge.STONE
+	var paper = Forge.BONE
+	var brass = Forge.BRONZE
+	var sash = Forge.AMBER if is_player else (Forge.BLOOD if kind == RUSH else (Forge.COPPER if kind == BRUTE else Forge.WAX))
 	var hip = _pivot(self, "hip", Vector3(0, 0.92 * s, 0))
-	_box(hip, Vector3(0, -0.02, 0), Vector3(0.4 * s, 0.18 * s, 0.26 * s), metal)
-	_box(hip, Vector3(0, 0.06, 0), Vector3(0.46 * s, 0.06 * s, 0.3 * s), tint, 0.6)
+	_box(hip, Vector3(0, -0.02, 0), Vector3(0.4 * s, 0.18 * s, 0.26 * s), wood)
+	_box(hip, Vector3(0, 0.07, 0), Vector3(0.46 * s, 0.05 * s, 0.3 * s), tint, 0.7)
 	for x in [-1, 1]:
-		_box(hip, Vector3(x * 0.18 * s, -0.12 * s, 0), Vector3(0.12 * s, 0.18 * s, 0.16 * s), cloth)
+		_box(hip, Vector3(x * 0.17 * s, -0.12 * s, 0), Vector3(0.12 * s, 0.2 * s, 0.14 * s), sash)
 	var spine = _pivot(hip, "spine", Vector3(0, 0.08 * s, 0.02 * s))
-	_cyl(spine, Vector3(0, 0.16 * s, 0), 0.06 * s, 0.28 * s, metal)
-	_box(spine, Vector3(0, 0.16 * s, 0.06), Vector3(0.16 * s, 0.28 * s, 0.05 * s), chalk)
+	_cyl(spine, Vector3(0, 0.16 * s, 0), 0.055 * s, 0.28 * s, brass)
+	_box(spine, Vector3(0, 0.16 * s, 0.05), Vector3(0.14 * s, 0.26 * s, 0.04 * s), paper)
 	var chest = _pivot(spine, "chest", Vector3(0, 0.32 * s, 0))
-	_box(chest, Vector3(0, 0.1 * s, 0), Vector3(0.5 * s, 0.38 * s, 0.3 * s), plate)
-	_box(chest, Vector3(0, 0.12 * s, -0.16 * s), Vector3(0.38 * s, 0.22 * s, 0.05 * s), cloth)
-	_box(chest, Vector3(0, 0.04 * s, -0.17 * s), Vector3(0.16 * s, 0.1 * s, 0.04 * s), tint, 0.9)
+	_box(chest, Vector3(0, 0.1 * s, 0), Vector3(0.48 * s, 0.36 * s, 0.28 * s), wood)
+	_box(chest, Vector3(0, 0.12 * s, -0.15 * s), Vector3(0.36 * s, 0.2 * s, 0.05 * s), paper)
+	_box(chest, Vector3(0, 0.02 * s, -0.16 * s), Vector3(0.14 * s, 0.1 * s, 0.04 * s), tint, 0.9)
 	for x in [-1.0, 1.0]:
-		var pad = _box(chest, Vector3(x * 0.3 * s, 0.2 * s, 0), Vector3(0.18 * s, 0.12 * s, 0.26 * s), metal)
+		var pad = _box(chest, Vector3(x * 0.3 * s, 0.2 * s, 0), Vector3(0.16 * s, 0.12 * s, 0.24 * s), brass)
 		extras.append(pad)
-		_box(chest, Vector3(x * 0.34 * s, 0.26 * s, 0), Vector3(0.07 * s, 0.07 * s, 0.07 * s), tint, 0.5)
+		_box(chest, Vector3(x * 0.34 * s, 0.26 * s, 0), Vector3(0.06 * s, 0.06 * s, 0.06 * s), tint, 0.5)
 	var cape = _pivot(chest, "cape", Vector3(0, 0.14 * s, 0.16 * s))
 	for i in range(3):
 		var seg = _pivot(cape if i == 0 else joints["cape" + str(i - 1)], "cape" + str(i), Vector3(0, -0.02 if i == 0 else -0.2 * s, 0.02))
-		_box(seg, Vector3(0, -0.1 * s, 0), Vector3(0.42 * s - i * 0.05, 0.22 * s, 0.045 * s), cloth)
+		_box(seg, Vector3(0, -0.1 * s, 0), Vector3(0.4 * s - i * 0.05, 0.22 * s, 0.04 * s), sash)
 	var neck = _pivot(chest, "neck", Vector3(0, 0.3 * s, 0))
-	_cyl(neck, Vector3(0, 0.06 * s, 0), 0.07 * s, 0.12 * s, metal)
+	_cyl(neck, Vector3(0, 0.06 * s, 0), 0.065 * s, 0.12 * s, paper)
 	var head = _pivot(neck, "head", Vector3(0, 0.16 * s, 0))
-	_box(head, Vector3(0, 0.08 * s, 0), Vector3(0.28 * s, 0.22 * s, 0.28 * s), plate)
-	_box(head, Vector3(0, 0.1 * s, -0.14 * s), Vector3(0.24 * s, 0.1 * s, 0.04 * s), chalk)
-	core = _box(head, Vector3(0, 0.1 * s, -0.16 * s), Vector3(0.2 * s, 0.035 * s, 0.03 * s), tint, 1.2)
-	_box(head, Vector3(0, 0.22 * s, 0), Vector3(0.3 * s, 0.04 * s, 0.3 * s), metal)
+	_box(head, Vector3(0, 0.08 * s, 0), Vector3(0.26 * s, 0.22 * s, 0.26 * s), paper)
+	_box(head, Vector3(0, 0.1 * s, -0.14 * s), Vector3(0.22 * s, 0.08 * s, 0.04 * s), wood)
+	core = _box(head, Vector3(0, 0.1 * s, -0.16 * s), Vector3(0.18 * s, 0.03 * s, 0.03 * s), tint, 1.2)
+	_box(head, Vector3(0, 0.22 * s, 0), Vector3(0.28 * s, 0.04 * s, 0.28 * s), brass)
 	if is_player or kind == BRUTE:
-		_box(head, Vector3(0, 0.28 * s, 0), Vector3(0.08 * s, 0.14 * s, 0.08 * s), tint, 0.6)
-		_orb_on(head, Vector3(0, 0.38 * s, 0), 0.07 * s, tint)
+		Forge.orb(head, Vector3(0, 0.32 * s, 0), 0.07 * s, tint, 1.0)
 	if kind == RUSH:
-		_box(head, Vector3(0, 0.22 * s, -0.04 * s), Vector3(0.06 * s, 0.2 * s, 0.22 * s), tint, 0.4)
+		_box(head, Vector3(0, 0.24 * s, -0.04 * s), Vector3(0.05 * s, 0.18 * s, 0.2 * s), tint, 0.4)
 	if kind == GUNNER:
-		_cyl(head, Vector3(0.12 * s, 0.06 * s, 0.02 * s), 0.05 * s, 0.16 * s, Forge.WAX, 0.6)
+		_cyl(head, Vector3(0.1 * s, 0.08 * s, 0.02 * s), 0.04 * s, 0.14 * s, Forge.WAX, 0.5)
 	var jaw = _pivot(head, "jaw", Vector3(0, -0.04 * s, -0.02 * s))
-	_box(jaw, Vector3(0, -0.03 * s, -0.06 * s), Vector3(0.18 * s, 0.05 * s, 0.14 * s), metal)
+	_box(jaw, Vector3(0, -0.03 * s, -0.06 * s), Vector3(0.16 * s, 0.05 * s, 0.12 * s), wood)
 	for side in [-1.0, 1.0]:
 		var prefix = "l" if side < 0 else "r"
 		var sh = _pivot(chest, prefix + "_sh", Vector3(side * 0.3 * s, 0.16 * s, 0))
-		_cyl(sh, Vector3(0, 0, 0), 0.08 * s, 0.1 * s, metal)
+		_cyl(sh, Vector3(0, 0, 0), 0.075 * s, 0.1 * s, brass)
 		var up = _pivot(sh, prefix + "_up", Vector3(0, 0, 0))
-		_cyl(up, Vector3(0, -0.16 * s, 0), 0.07 * s, 0.3 * s, plate)
-		_box(up, Vector3(0, -0.16 * s, -0.05 * s), Vector3(0.08 * s, 0.22 * s, 0.04 * s), cloth)
+		_cyl(up, Vector3(0, -0.16 * s, 0), 0.065 * s, 0.3 * s, wood)
+		_box(up, Vector3(0, -0.16 * s, -0.05 * s), Vector3(0.07 * s, 0.2 * s, 0.04 * s), sash)
 		var lo = _pivot(up, prefix + "_lo", Vector3(0, -0.32 * s, 0))
-		_cyl(lo, Vector3(0, -0.14 * s, 0), 0.055 * s, 0.26 * s, metal)
+		_cyl(lo, Vector3(0, -0.14 * s, 0), 0.05 * s, 0.26 * s, paper)
 		var hn = _pivot(lo, prefix + "_hand", Vector3(0, -0.28 * s, 0))
-		_box(hn, Vector3(0, -0.04 * s, 0), Vector3(0.09 * s, 0.1 * s, 0.08 * s), chalk)
+		_box(hn, Vector3(0, -0.04 * s, 0), Vector3(0.09 * s, 0.1 * s, 0.08 * s), wood)
 		for f in range(3):
-			_box(hn, Vector3((f - 1) * 0.028 * s, -0.12 * s, -0.02 * s), Vector3(0.022 * s, 0.1 * s, 0.024 * s), metal)
+			_box(hn, Vector3((f - 1) * 0.028 * s, -0.12 * s, -0.02 * s), Vector3(0.02 * s, 0.09 * s, 0.022 * s), paper)
 		if kind == RUSH:
 			_box(hn, Vector3(0, -0.16 * s, -0.04 * s), Vector3(0.04 * s, 0.14 * s, 0.03 * s), tint, 0.4)
 		if side > 0:
@@ -117,43 +114,36 @@ func _build_humanoid(is_player: bool) -> void:
 	for side in [-1.0, 1.0]:
 		var prefix = "l" if side < 0 else "r"
 		var th = _pivot(hip, prefix + "_th", Vector3(side * 0.12 * s, -0.06 * s, 0))
-		_cyl(th, Vector3(0, -0.18 * s, 0), 0.08 * s, 0.34 * s, plate)
-		_box(th, Vector3(0, -0.18 * s, -0.05 * s), Vector3(0.1 * s, 0.28 * s, 0.04 * s), cloth)
+		_cyl(th, Vector3(0, -0.18 * s, 0), 0.075 * s, 0.34 * s, wood)
+		_box(th, Vector3(0, -0.18 * s, -0.05 * s), Vector3(0.09 * s, 0.26 * s, 0.04 * s), sash)
 		var shn = _pivot(th, prefix + "_shn", Vector3(0, -0.36 * s, 0))
-		_cyl(shn, Vector3(0, -0.16 * s, 0), 0.06 * s, 0.3 * s, metal)
+		_cyl(shn, Vector3(0, -0.16 * s, 0), 0.055 * s, 0.3 * s, paper)
 		var ft = _pivot(shn, prefix + "_ft", Vector3(0, -0.32 * s, 0))
-		_box(ft, Vector3(0, -0.03 * s, -0.08 * s), Vector3(0.12 * s, 0.07 * s, 0.26 * s), chalk)
-		_box(ft, Vector3(0, -0.01 * s, -0.16 * s), Vector3(0.08 * s, 0.04 * s, 0.08 * s), tint, 0.35)
+		_box(ft, Vector3(0, -0.03 * s, -0.08 * s), Vector3(0.12 * s, 0.07 * s, 0.26 * s), wood)
+		_box(ft, Vector3(0, -0.01 * s, -0.16 * s), Vector3(0.08 * s, 0.04 * s, 0.08 * s), tint, 0.3)
 	if hand == null:
 		hand = _pivot(self, "hand", Vector3(0.35 * s, 1.1 * s, -0.2 * s))
 
-func _orb_on(parent: Node3D, at: Vector3, radius: float, color: Color) -> void:
-	Forge.orb(parent, at, radius, color, 1.0)
-
 func _build_heart() -> void:
 	var root = _pivot(self, "hip", Vector3(0, 1.6, 0))
-	core = Forge.orb(root, Vector3(0, 0.9, 0), 0.95, tint, 1.35)
+	core = Forge.orb(root, Vector3(0, 0.95, 0), 0.9, tint, 1.4)
 	joints["core"] = core
-	_box(root, Vector3(0, 0.9, 0), Vector3(1.15, 1.15, 1.15), Forge.BRONZE)
-	var cage = _box(root, Vector3(0, 0.9, 0), Vector3(0.35, 2.4, 0.35), Forge.STONE)
-	cage.rotation_degrees = Vector3(0, 45, 0)
-	extras.append(cage)
-	for i in range(6):
-		var a = float(i) / 6.0 * TAU
-		var fin = _box(root, Vector3(cos(a) * 1.15, 0.9, sin(a) * 1.15), Vector3(0.08, 1.8, 0.55), Forge.COPPER, 0.5)
-		fin.rotation = Vector3(0, -a, 0)
-		extras.append(fin)
+	_cyl(root, Vector3(0, 0.2, 0), 0.35, 1.6, Forge.STONE)
+	for i in range(8):
+		var a = float(i) / 8.0 * TAU
+		var petal = _box(root, Vector3(cos(a) * 1.1, 0.95, sin(a) * 1.1), Vector3(0.12, 1.6, 0.7), Forge.AMBER if i % 2 == 0 else Forge.WAX, 0.55)
+		petal.rotation = Vector3(0.2, -a, 0)
+		extras.append(petal)
 	for i in range(5):
-		var ring = Forge.ring(root, Vector3(0, 0.9, 0), 1.45 + i * 0.16, tint if i % 2 == 0 else Forge.AMBER, 0.06)
+		var ring = Forge.ring(root, Vector3(0, 0.95, 0), 1.4 + i * 0.16, tint if i % 2 == 0 else Forge.WAX, 0.06)
 		ring.rotation = Vector3(i * 0.5, 0, i * 0.35)
 		extras.append(ring)
 		joints["ring" + str(i)] = ring
 	for i in range(4):
-		var t = _pivot(root, "tend" + str(i), Vector3(cos(i * TAU / 4.0) * 0.85, -0.15, sin(i * TAU / 4.0) * 0.85))
-		_cyl(t, Vector3(0, -0.55, 0), 0.1, 1.15, Forge.BRONZE, 0.0)
-		_box(t, Vector3(0, -1.15, 0), Vector3(0.28, 0.16, 0.28), tint, 0.7)
-	_cyl(root, Vector3(0, -0.35, 0), 0.55, 1.1, Forge.STONE)
-	Forge.orb(root, Vector3(0, 2.15, 0), 0.28, Forge.WAX, 1.4)
+		var t = _pivot(root, "tend" + str(i), Vector3(cos(i * TAU / 4.0) * 0.8, -0.1, sin(i * TAU / 4.0) * 0.8))
+		_cyl(t, Vector3(0, -0.55, 0), 0.09, 1.1, Forge.STONE)
+		Forge.orb(t, Vector3(0, -1.15, 0), 0.16, tint, 0.8)
+	Forge.orb(root, Vector3(0, 2.15, 0), 0.26, Forge.WAX, 1.3)
 	hand = _pivot(self, "hand", Vector3(1.4, 2.2, 0))
 
 func animate(dt: float, velocity: Vector3, on_floor: bool, attacking: bool, charging: float, frozen: bool, lifted: bool) -> void:
@@ -230,11 +220,11 @@ func _arm(side: String, phase: float, planar: float, striking: bool, charging: f
 		joints[side + "_hand"].rotation.x = strike * 0.3
 
 func _anim_heart(dt: float, charging: float) -> void:
-	var beat = 1.0 + sin(clock * 3.4) * 0.08 + charging * 0.2
+	var beat = 1.0 + sin(clock * 3.2) * 0.08 + charging * 0.2
 	if joints.has("hip"):
 		joints.hip.scale = Vector3.ONE * beat
 	if is_instance_valid(core):
-		core.scale = Vector3.ONE * (1.0 + sin(clock * 6.8) * 0.12)
+		core.scale = Vector3.ONE * (1.0 + sin(clock * 6.4) * 0.12)
 	for i in range(5):
 		var id = "ring" + str(i)
 		if joints.has(id):

@@ -1,13 +1,13 @@
 extends CanvasLayer
 ## Responsive vector HUD and menus. All UI strings are Russian.
-const INK = Color("071014")
-const PANEL = Color("12282c")
-const LINE = Color("3d6a72")
-const TEXT = Color("e8f4ef")
-const MUTED = Color("7aa0a4")
-const LIME = Color("7dffc3")
-const CYAN = Color("4ad4ff")
-const PINK = Color("ff6a4a")
+const INK = Color("0a080c")
+const PANEL = Color("1a1214")
+const LINE = Color("6a3a32")
+const TEXT = Color("f4ece0")
+const MUTED = Color("a08070")
+const LIME = Color("e8302a")
+const CYAN = Color("f2c44a")
+const PINK = Color("7a1020")
 var game
 var canvas: Control
 var controls: Control
@@ -150,7 +150,7 @@ func make_button(rect: Rect2, text: String, callback: Callable, accent: bool = f
 		style.bg_color = Color(0, 0, 0, 0) if transparent else (LIME if accent else PANEL)
 		style.border_color = Color(0, 0, 0, 0) if transparent else (LIME if state != "normal" else LINE)
 		style.set_border_width_all(0 if transparent else 1)
-		if state == "hover" and accent: style.bg_color = Color("c8fff0")
+		if state == "hover" and accent: style.bg_color = Color("ff8a70")
 		button.add_theme_stylebox_override(state, style)
 	button.pressed.connect(callback)
 	controls.add_child(button)
@@ -182,13 +182,13 @@ func pal_glow() -> Color:
 	return CYAN
 
 func frost() -> void:
-	canvas.draw_rect(Rect2(0, 0, 1440, 28), Color(0.02, 0.06, 0.07, 0.35))
-	canvas.draw_rect(Rect2(0, 872, 1440, 28), Color(0.02, 0.06, 0.07, 0.35))
-	canvas.draw_rect(Rect2(0, 0, 22, 900), Color(0.02, 0.06, 0.07, 0.28))
-	canvas.draw_rect(Rect2(1418, 0, 22, 900), Color(0.02, 0.06, 0.07, 0.28))
-	for i in range(4):
-		var y = 90 + i * 200 + sin(clock * 1.4 + i) * 10
-		canvas.draw_rect(Rect2(0, y, 1440, 2), Color(pal_glow(), 0.07))
+	canvas.draw_rect(Rect2(0, 0, 1440, 24), Color(0.04, 0.02, 0.03, 0.4))
+	canvas.draw_rect(Rect2(0, 876, 1440, 24), Color(0.04, 0.02, 0.03, 0.4))
+	canvas.draw_rect(Rect2(0, 0, 18, 900), Color(0.04, 0.02, 0.03, 0.3))
+	canvas.draw_rect(Rect2(1422, 0, 18, 900), Color(0.04, 0.02, 0.03, 0.3))
+	for i in range(5):
+		var y = 70 + i * 160 + sin(clock * 1.1 + i) * 12
+		canvas.draw_rect(Rect2(0, y, 1440, 1), Color(pal_accent(), 0.08))
 
 func draw_transition() -> void:
 	if game.trans_t < 0:
@@ -202,26 +202,26 @@ func draw_transition() -> void:
 	var a = pal_accent()
 	var g = pal_glow()
 	var c = Vector2(720, 450)
-	# Aurora curtains fall, then part.
-	for i in range(8):
-		var h = 900.0 * clampf(cover * 1.2 - i * 0.04, 0, 1)
-		var x = 80 + i * 170
-		canvas.draw_rect(Rect2(x, 0, 48, h), Color(a if i % 2 == 0 else g, 0.22 + cover * 0.35))
-	# Frost iris.
+	for i in range(10):
+		var w = 1440.0 * clampf(cover * 1.15 - i * 0.05, 0, 1)
+		var y = i * 90.0
+		if i % 2 == 0:
+			canvas.draw_rect(Rect2(0, y, w, 70), Color(a, 0.28 + cover * 0.3))
+		else:
+			canvas.draw_rect(Rect2(1440 - w, y, w, 70), Color(g, 0.22 + cover * 0.3))
 	var iris = absf(t - 0.5) * 2.0
-	var r = 30 + iris * 820
+	var r = 24 + iris * 780
 	for k in range(3):
-		canvas.draw_arc(c, r + k * 18, 0, TAU, 64, Color(g, 0.55 * (1.0 - iris)), 6 - k, true)
+		canvas.draw_arc(c, r + k * 16, 0, TAU, 56, Color(a, 0.5 * (1.0 - iris)), 5 - k, true)
 	if t > 0.36 and t < 0.64:
 		var flash = maxf(0, 1.0 - absf(t - 0.5) * 7.0)
-		canvas.draw_rect(Rect2(0, 0, 1440, 900), Color(0.85, 1, 0.95, flash * 0.5))
+		canvas.draw_rect(Rect2(0, 0, 1440, 900), Color(1, 0.92, 0.86, flash * 0.5))
 		centered(430, "2D" if game.trans_to_side else "3D", 96, Color(INK, flash), true)
 		centered(510, game.SECTOR_NAMES[game.sector], 22, Color(INK, flash))
-	# Hex sparkle around the beat.
-	for i in range(6):
-		var ang = i * TAU / 6.0 + t * 2.0
-		var p = c + Vector2(cos(ang), sin(ang)) * (80 + cover * 260)
-		canvas.draw_circle(p, 7 + cover * 10, Color(a, 0.55 * cover))
+	for i in range(8):
+		var ang = i * TAU / 8.0 + t * 3.0
+		var p = c + Vector2(cos(ang), sin(ang)) * (60 + cover * 240)
+		canvas.draw_circle(p, 5 + cover * 8, Color(g, 0.5 * cover))
 
 func draw_screen() -> void:
 	if menu == "hub": draw_hub(); frost(); draw_transition(); return
@@ -233,16 +233,16 @@ func draw_screen() -> void:
 	draw_transition()
 
 func background() -> void:
-	canvas.draw_rect(Rect2(0, 0, 1440, 900), Color(0.03, 0.07, 0.08, 0.96))
-	for y in range(0, 900, 18):
-		canvas.draw_rect(Rect2(0, y, 1440, 2), Color(0.08, 0.16, 0.18, 0.35))
+	canvas.draw_rect(Rect2(0, 0, 1440, 900), Color(0.04, 0.03, 0.04, 0.96))
+	for y in range(0, 900, 20):
+		canvas.draw_rect(Rect2(0, y, 1440, 1), Color(0.12, 0.06, 0.06, 0.4))
 	canvas.draw_rect(Rect2(32, 32, 1376, 836), pal_accent(), false, 3)
 	canvas.draw_rect(Rect2(40, 40, 1360, 820), LINE, false, 2)
 	line(Vector2(48, 75), Vector2(1392, 75), pal_accent(), 3)
 	line(Vector2(48, 849), Vector2(1392, 849), pal_accent(), 3)
-	text(Vector2(48, 52), "ZB / CHALK TIDE", 17, pal_accent(), true)
+	text(Vector2(48, 52), "ZB / VERMILION ORCHARD", 17, pal_accent(), true)
 	text(Vector2(1105, 52), "ОДИН УРОВЕНЬ. НОЛЬ ПОКОЯ.", 14, MUTED)
-	text(Vector2(48, 878), "ZERO BEAT   /   ПОЛЯРНЫЙ ПРИЛИВ", 13, MUTED)
+	text(Vector2(48, 878), "ZERO BEAT   /   КАРМИНОВЫЙ САД", 13, MUTED)
 	text(Vector2(1165, 878), "GODOT 4  /  186 BPM", 13, MUTED)
 
 func draw_hub() -> void:
@@ -251,20 +251,20 @@ func draw_hub() -> void:
 	text(Vector2(42, 224), "НУЛЕВОЙ", 101, TEXT, true)
 	text(Vector2(42, 324), "ТАКТ", 101, LIME, true)
 	canvas.draw_rect(Rect2(49, 347, 43, 4), LIME)
-	text(Vector2(111, 357), "РАЗОРВИ ПРИЛИВ. ВЫРВИ ЯДРО КАРЬЕРА.", 18, TEXT)
-	text(Vector2(48, 393), "Три печати. Одно ядро. Погоня через 3D и 2D под ломаный бит.", 19, MUTED)
+	text(Vector2(111, 357), "РАЗОРВИ САД. СОРВИ ЦВЕТОК.", 18, TEXT)
+	text(Vector2(48, 393), "Три печати. Один цветок. Погоня через 3D и 2D под ломаный бит.", 19, MUTED)
 	var c = Vector2(1140, 252)
-	for i in range(6):
-		canvas.draw_arc(c, 40+i*24, clock*0.08*(1 if i%2==0 else -1), clock*0.08*(1 if i%2==0 else -1)+TAU, 72, LIME if i==2 else CYAN, 2 if i==2 else 1, true)
-	for i in range(6):
-		var angle = i*TAU/6.0 + clock*0.05
+	for i in range(5):
+		canvas.draw_arc(c, 36+i*26, clock*0.07*(1 if i%2==0 else -1), clock*0.07*(1 if i%2==0 else -1)+TAU, 64, LIME if i==2 else CYAN, 2 if i==2 else 1, true)
+	for i in range(8):
+		var angle = i*TAU/8.0 + clock*0.06
 		var v = Vector2(cos(angle), sin(angle))
-		line(c+v*36, c+v*170, MUTED if i%2==0 else LIME, 2 if i%2==0 else 1)
-	for i in range(6):
-		var a = i*TAU/6.0 + clock*0.12
-		canvas.draw_colored_polygon(PackedVector2Array([c, c+Vector2(cos(a),sin(a))*42, c+Vector2(cos(a+0.4),sin(a+0.4))*42]), Color(CYAN, 0.45))
-	canvas.draw_circle(c, 20, LIME)
-	canvas.draw_circle(c, 10, INK)
+		line(c+v*28, c+v*160, MUTED if i%2==0 else LIME, 2 if i%2==0 else 1)
+	for i in range(5):
+		var a = i*TAU/5.0 + clock*0.1
+		canvas.draw_colored_polygon(PackedVector2Array([c, c+Vector2(cos(a),sin(a))*40, c+Vector2(cos(a+0.45),sin(a+0.45))*40]), Color(LIME, 0.45))
+	canvas.draw_circle(c, 18, CYAN)
+	canvas.draw_circle(c, 9, INK)
 	text(Vector2(1270, 404), "[ 186.00 ]", 15, LIME)
 	text(Vector2(48, 429), "01  /  ВЫБЕРИ ОБОЛОЧКУ", 15, MUTED, true)
 	for i in range(3): draw_class_card(i)
@@ -277,7 +277,7 @@ func draw_class_card(index: int) -> void:
 	var selected = game.player.class_id == index
 	var colors = [LIME, CYAN, PINK]
 	var accent = colors[index]
-	panel(Rect2(x, 446, 438, 258), Color("103038") if selected else PANEL, accent if selected else (MUTED if hovered == index else LINE))
+	panel(Rect2(x, 446, 438, 258), Color("2a1214") if selected else PANEL, accent if selected else (MUTED if hovered == index else LINE))
 	if selected: canvas.draw_rect(Rect2(x, 446, 438, 3), accent)
 	text(Vector2(x+22, 480), "0"+str(index+1)+"  /  "+["БЛИЖНИЙ БОЙ", "ДАЛЬНИЙ БОЙ", "СИНТЕЗ СТИХИЙ"][index], 14, accent)
 	text(Vector2(x+22, 530), ["КЛИНОК", "БАЛЛИСТ", "АРКАНИСТ"][index], 32, TEXT, true)
@@ -308,10 +308,10 @@ func draw_class_card(index: int) -> void:
 func draw_game() -> void:
 	var p = game.player
 	var hub = game.phase == "hub"
-	panel(Rect2(28, 25, 350, 91), Color(0.05, 0.1, 0.11, 0.9), pal_accent())
+	panel(Rect2(28, 25, 350, 91), Color(0.08, 0.04, 0.05, 0.9), pal_accent())
 	canvas.draw_rect(Rect2(28, 25, 4, 91), pal_accent())
 	text(Vector2(47, 52), "ZB / "+("ПРЕДКАМЕРА" if hub else game.SECTOR_NAMES[game.sector]), 17, pal_accent(), true)
-	text(Vector2(47, 82), "ПРЫГНИ В ЯМУ" if hub else ("БЕГИ К ВЫХОДУ →" if game.phase=="escape" else ("ДОГОНИ ЯДРО" if game.sector>=6 else "РАЗРУШЬ ТРИ ПЕЧАТИ")), 20, TEXT, true)
+	text(Vector2(47, 82), "ПРЫГНИ В ЯМУ" if hub else ("БЕГИ К ВЫХОДУ →" if game.phase=="escape" else ("ДОГОНИ ЦВЕТОК" if game.sector>=6 else "РАЗРУШЬ ТРИ ПЕЧАТИ")), 20, TEXT, true)
 	text(Vector2(47, 104), "1 / 2 / 3 — класс • E — терминал" if hub else "ПЕЧАТИ  %d / 3   ·   ЦЕЛИ В БЛОКЕ  %02d" % [game.seals, game.block_enemies(mini(2, game.sector/2))], 13, MUTED)
 	# Mission progress — a single continuous timeline.
 	line(Vector2(426, 43), Vector2(990, 43), LINE, 3)
@@ -369,10 +369,10 @@ func draw_game() -> void:
 				else: centered(743, ("← ЦЕЛЬ ПОЗАДИ" if nearest.global_position.x < p.global_position.x else "ЦЕЛЬ ВПЕРЕДИ →")+" / %d М"%nearest_distance, 13, PINK)
 			else: centered(743, "← ЦЕЛЬ ПОЗАДИ / %d М"%nearest_distance, 13, PINK)
 	if game.notice_time > 0:
-		panel(Rect2(360, 140, 720, 42), Color(0.04,0.1,0.12,0.88), Color(game.notice_color,0.4))
+		panel(Rect2(360, 140, 720, 42), Color(0.08,0.04,0.05,0.88), Color(game.notice_color,0.4))
 		centered(167, game.notice, 15, game.notice_color, true)
 	# Vital statistics.
-	panel(Rect2(28, 764, 353, 105), Color(0.04,0.1,0.12,0.92))
+	panel(Rect2(28, 764, 353, 105), Color(0.08,0.04,0.05,0.92))
 	text(Vector2(46, 789), "ЦЕЛОСТНОСТЬ", 13, MUTED)
 	text(Vector2(45, 840), "%03d"%p.hp, 43, PINK if p.hp<30 else TEXT, true)
 	text(Vector2(148, 837), "/ 100", 16, MUTED)
@@ -382,7 +382,7 @@ func draw_game() -> void:
 	text(Vector2(260, 827), "%03d"%p.energy, 27, CYAN, true)
 	canvas.draw_rect(Rect2(228, 839, 125, 3), LINE)
 	canvas.draw_rect(Rect2(228, 839, 125*p.energy/100, 3), CYAN)
-	panel(Rect2(997, 782, 415, 87), Color(0.04,0.1,0.12,0.92))
+	panel(Rect2(997, 782, 415, 87), Color(0.08,0.04,0.05,0.92))
 	text(Vector2(1014, 806), ["01 / КЛИНОК", "02 / БАЛЛИСТ", "03 / АРКАНИСТ"][p.class_id], 13, LIME)
 	text(Vector2(1014, 835), p.weapon_name(), 19, TEXT, true)
 	text(Vector2(1014, 856), "1 / 2 / 3 — стихии  ·  F — синтез" if p.class_id==2 else "Q / E / колесо — сменить оружие", 13, MUTED)
@@ -399,7 +399,7 @@ func draw_game() -> void:
 		canvas.draw_rect(Rect2(650, 826, 140*(1-p.dash_cooldown/0.85), 3), LIME)
 	centered(887, "WASD / ДВИЖЕНИЕ     ПРОБЕЛ / ДВОЙНОЙ ПРЫЖОК     ЛКМ / АТАКА     ПКМ / ОСОБАЯ     TAB / ПОМОЩЬ     ESC / ПАУЗА", 12, MUTED)
 	if is_instance_valid(game.boss) and not game.boss.dead:
-		centered(207, "Я Д Р О   П Р И Л И В А", 17, PINK, true)
+		centered(207, "Ц В Е Т О К   С А Д А", 17, PINK, true)
 		canvas.draw_rect(Rect2(460, 221, 520, 5), LINE)
 		canvas.draw_rect(Rect2(460, 221, 520*game.boss.hp/game.boss.max_hp, 5), PINK)
 	if game.phase == "escape":
@@ -415,7 +415,7 @@ func draw_game() -> void:
 func draw_pause() -> void:
 	background()
 	text(Vector2(80, 185), "ПАУЗА", 72, TEXT, true)
-	text(Vector2(83, 231), "ПРИЛИВ ПОДОЖДЁТ.", 20, LIME)
+	text(Vector2(83, 231), "САД ПОДОЖДЁТ.", 20, LIME)
 	text(Vector2(80, 598), "МУЗЫКА", 17, MUTED)
 	text(Vector2(80, 646), "МЫШЬ", 17, MUTED)
 	text(Vector2(695, 210), "НЕ ДАВАЙ РИТМУ УМЕРЕТЬ", 27, TEXT, true)
@@ -436,7 +436,7 @@ func draw_pause() -> void:
 func draw_help() -> void:
 	background()
 	text(Vector2(48, 151), "ПРОТОКОЛ ВЫЖИВАНИЯ", 46, TEXT, true)
-	text(Vector2(50, 191), "Хаб → яма → 6 секторов → 3 печати → ядро (3D, 2D, 3D, квадрат) → выход.", 20, LIME)
+	text(Vector2(50, 191), "Хаб → яма → 6 секторов → 3 печати → цветок (3D, 2D, 3D, квадрат) → выход.", 20, LIME)
 	line(Vector2(720,235),Vector2(720,754))
 	text(Vector2(48, 252), "УПРАВЛЕНИЕ", 22, TEXT, true)
 	var rows = [
@@ -471,7 +471,7 @@ func draw_end() -> void:
 	background()
 	centered(213, "ОБРЯД ЗАВЕРШЁН" if game.won else "СВЯЗЬ С ОБОЛОЧКОЙ ПОТЕРЯНА", 18, LIME if game.won else PINK)
 	centered(326, "ЦИКЛ РАЗОРВАН" if game.won else "ТАКТ ОБОРВАН", 69, TEXT, true)
-	centered(379, "Карьер выдох. Впервые ты слышишь собственный пульс." if game.won else "Ещё одна оболочка. Ещё одна попытка. Не сбавляй темп.", 21, MUTED)
+	centered(379, "Сад выдох. Впервые ты слышишь собственный пульс." if game.won else "Ещё одна оболочка. Ещё одна попытка. Не сбавляй темп.", 21, MUTED)
 	line(Vector2(270, 424),Vector2(1170,424))
 	var values = ["%07d"%game.score, str(game.kills), "%02d:%02d"%[int(game.elapsed)/60,int(game.elapsed)%60], str(game.seals)+" / 3"]
 	var labels = ["СЧЁТ", "УНИЧТОЖЕНО", "ВРЕМЯ", "ПЕЧАТИ"]

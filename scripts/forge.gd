@@ -1,17 +1,17 @@
 class_name Forge
 extends RefCounted
-## Shared procedural geometry. No external models or textures are required.
+## Procedural meshes. Nothing is imported.
 
-const SOOT = Color("071014")
-const STONE = Color("1e3942")
-const BRONZE = Color("2f8f7a")
-const BONE = Color("e8f4ef")
-const IVORY = Color("f4fbf7")
-const AMBER = Color("7dffc3")
-const BLOOD = Color("ff6a4a")
-const COPPER = Color("4ad4ff")
-const WAX = Color("ffd08a")
-const EMBER = Color("ff7a45")
+const SOOT = Color("0a080c")
+const STONE = Color("241814")
+const BRONZE = Color("8a5a28")
+const BONE = Color("f4ece0")
+const IVORY = Color("faf6ee")
+const AMBER = Color("e8302a")
+const BLOOD = Color("7a1020")
+const COPPER = Color("3a8a48")
+const WAX = Color("f2c44a")
+const EMBER = Color("ff5a28")
 
 static var materials = {}
 
@@ -21,8 +21,8 @@ static func mat(color: Color, glow: float = 0.0) -> StandardMaterial3D:
 		return materials[key]
 	var m = StandardMaterial3D.new()
 	m.albedo_color = color
-	m.roughness = 0.58 if glow <= 0.0 else 0.22
-	m.metallic = 0.32 if glow <= 0.0 else 0.0
+	m.roughness = 0.7 if glow <= 0.0 else 0.2
+	m.metallic = 0.08 if glow <= 0.0 else 0.0
 	if glow > 0.0:
 		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		m.emission_enabled = true
@@ -97,8 +97,6 @@ static func label(parent: Node3D, at: Vector3, text: String, size: int = 64, col
 	node.font_size = size
 	node.pixel_size = 0.009
 	node.modulate = color
-	node.no_depth_test = false
-	node.outline_size = 0
 	parent.add_child(node)
 	node.position = at
 	return node

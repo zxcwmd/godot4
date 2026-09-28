@@ -37,13 +37,14 @@ func _draw() -> void:
 		draw_hub()
 		return
 	draw_game()
-	if game.state in ["PAUSE", "UPGRADE", "HELP", "OVER"]:
+	if game.state in ["PAUSE", "UPGRADE", "HELP", "OVER", "LAB"]:
 		draw_rect(Rect2(0, 0, 1440, 900), Color(0.015, 0.025, 0.048, 0.94))
 		match game.state:
 			"PAUSE": draw_pause()
 			"UPGRADE": draw_upgrades()
 			"HELP": draw_help()
 			"OVER": draw_over()
+			"LAB": draw_lab()
 
 func draw_hub() -> void:
 	# Asymmetric editorial layout leaves the animated 3D hub visible on the right.
@@ -84,18 +85,18 @@ func draw_hub() -> void:
 	line(Vector2(64, 786), Vector2(978, 786))
 	text(Vector2(64, 819), "WASD  движение      МЫШЬ  прицел / атака      SHIFT  рывок      SPACE  прыжок", 15, ink)
 	text(Vector2(64, 849), "TAB  улучшения      F1  справка      M  музыка      ESC  пауза", 14, muted)
-	text(Vector2(1090, 867), "ENTER / ПРЫЖОК В НЕИЗВЕСТНОСТЬ", 11, muted)
+	text(Vector2(1090, 883), "ENTER / ПРЫЖОК В НЕИЗВЕСТНОСТЬ", 11, muted)
 
 func draw_game() -> void:
 	var p = game.player
 	panel(Rect2(30, 26, 365, 84))
 	draw_rect(Rect2(30, 26, 4, 84), Arsenal.LIME)
 	text(Vector2(50, 51), "R//R   •   " + ("FLATLINE / 2D" if game.top_down else "PERSPECTIVE / 3D"), 13, Arsenal.LIME)
-	text(Vector2(50, 88), "%02d" % (game.sector + 1), 30, ink)
-	text(Vector2(102, 85), RiftWorld.ROOM_NAMES[game.sector], 14, muted)
+	text(Vector2(50, 88), "%02d" % ((game.lab.zone if game.sandbox else game.sector) + 1), 30, ink)
+	text(Vector2(102, 85), game.lab.NAMES[game.lab.zone] if game.sandbox else RiftWorld.ROOM_NAMES[game.sector], 14, muted)
 	panel(Rect2(610, 26, 220, 87))
-	text(Vector2(656, 51), "ВРЕМЯ В ЖИВЫХ", 12, muted)
-	text(Vector2(649, 94), game.clock(game.elapsed), 39, ink)
+	text(Vector2(656, 51), "RIFT LAB / ПОЛИГОН" if game.sandbox else "ВРЕМЯ В ЖИВЫХ", 12, muted)
+	text(Vector2(635 if game.sandbox else 649, 94), "SANDBOX" if game.sandbox else game.clock(game.elapsed), 29 if game.sandbox else 39, Arsenal.CYAN if game.sandbox else ink)
 	panel(Rect2(1138, 26, 270, 84))
 	text(Vector2(1158, 53), "УБИЙСТВА", 12, muted)
 	text(Vector2(1158, 89), "%03d" % game.kills, 32, Arsenal.ORANGE)
@@ -153,7 +154,7 @@ func draw_game() -> void:
 		text(Vector2(564, 806), "+%d  ОЧКИ УЛУЧШЕНИЯ  [TAB]" % game.points, 16, Arsenal.LIME)
 	draw_rect(Rect2(30, 884, 1378, 3), Color("253044"))
 	draw_rect(Rect2(30, 884, 1378.0 * game.xp / game.xp_goal, 3), Arsenal.VIOLET)
-	if game.class_index == 2:
+	if game.class_index == 2 or (game.sandbox and Arsenal.WEAPONS[p.weapon].kind == "magic"):
 		panel(Rect2(450, 660, 540, 76))
 		text(Vector2(470, 689), "Q  ОГОНЬ     E  ЛЁД     R  МОЛНИЯ", 13, muted)
 		text(Vector2(470, 719), (p.elements if not p.elements.is_empty() else "— — —") + "  > F", 20, Arsenal.VIOLET)
@@ -163,8 +164,17 @@ func draw_game() -> void:
 		panel(Rect2(720 - width / 2, 140, width, 46), Color(0.02, 0.035, 0.06, 0.94), game.notice_color.darkened(0.6))
 		text(Vector2(745 - width / 2, 169), game.notice, 19, game.notice_color)
 	# A tiny route map is also a navigation hint: the arena is not a straight hallway.
-	if game.elapsed < 14 or game.top_down:
+	if not game.sandbox and (game.elapsed < 14 or game.top_down):
 		draw_map(Vector2(1252, 160))
+	if game.sandbox:
+		panel(Rect2(30, 249, 282, 159))
+		text(Vector2(50, 276), "ТЕЛЕМЕТРИЯ / ЖИВОЙ УРОН", 12, Arsenal.CYAN)
+		text(Vector2(50, 310), "DPS / 5 СЕК:  %.1f" % game.lab.dps, 20, ink)
+		text(Vector2(50, 337), "ПОСЛЕДНИЙ: %.0f" % game.lab.last_hit, 15, muted)
+		text(Vector2(50, 363), "ВСЕГО: %.0f" % game.lab.total_damage, 15, muted)
+		text(Vector2(50, 390), "НЕУЯЗВИМОСТЬ: " + ("ВКЛ" if game.lab.god_mode else "ВЫКЛ"), 12, Arsenal.LIME)
+		panel(Rect2(1025, 135, 383, 55))
+		text(Vector2(1042, 169), "B  ПУЛЬТ ПОЛИГОНА   /   V  3D <> 2D", 15, Arsenal.CYAN)
 	if game.state == "DROP":
 		text(Vector2(462, 385), "ВНИЗ ПО КРОЛИЧЬЕЙ НОРЕ", 29, Arsenal.LIME)
 		text(Vector2(586, 425), "СИГНАЛ СКОРО ВОССТАНОВИТСЯ", 12, ink)
@@ -269,13 +279,18 @@ func build_menu() -> void:
 					game.selected_weapon = id
 					game.sound.play("ui")
 					build_menu(), Arsenal.CLASSES[game.class_index].color, false, id == game.selected_weapon, 15)
-			button(Rect2(1028, 777, 349, 64), "НАЧАТЬ ЗАБЕГ   >>", game.start_run, Arsenal.LIME, false, true, 21)
+			button(Rect2(1028, 755, 349, 52), "НАЧАТЬ ЗАБЕГ   >>", game.start_run, Arsenal.LIME, false, true, 21)
+			button(Rect2(1028, 817, 349, 46), "RIFT LAB / ТЕСТОВЫЙ ПОЛИГОН", game.start_sandbox, Arsenal.CYAN, false, false, 15)
+		"LAB":
+			build_lab_menu()
 		"PAUSE":
 			button(Rect2(120, 395, 520, 65), "ПРОДОЛЖИТЬ  /  ESC", game.resume_run, Arsenal.LIME, false, true)
 			button(Rect2(120, 482, 520, 60), "ПРОТОКОЛ / СПРАВКА", func():
 				game.state = "HELP"
 				build_menu(), Arsenal.CYAN)
 			button(Rect2(120, 565, 520, 60), "ЗАВЕРШИТЬ ЗАБЕГ / В ХАБ", game.return_to_hub, Arsenal.ORANGE)
+			if game.sandbox:
+				button(Rect2(735, 395, 550, 65), "ПУЛЬТ ПОЛИГОНА / B", game.open_lab, Arsenal.CYAN)
 		"UPGRADE":
 			for i in 8:
 				var id = i
@@ -314,3 +329,64 @@ func button(rect: Rect2, title: String, callback: Callable, accent: Color, trans
 	b.pressed.connect(callback)
 	ui.add_child(b)
 	return b
+
+func draw_lab() -> void:
+	text(Vector2(64, 51), "R//R   /   EXPERIMENTAL FACILITY", 15, Arsenal.CYAN)
+	text(Vector2(60, 110), "RIFT // LAB", 55, ink)
+	text(Vector2(866, 72), "СИМУЛЯЦИЯ НА ПАУЗЕ", 22, Arsenal.LIME)
+	text(Vector2(866, 106), "Без рекордов, автоспавна и таймера выживания.", 16, muted)
+	text(Vector2(64, 212), "01  /  ОРУЖИЕ — ПОЛНЫЙ ДОСТУП", 15, Arsenal.CYAN)
+	text(Vector2(64, 495), "02  /  ПРИЗВАТЬ ЗАКЛИНАНИЕ", 15, Arsenal.VIOLET)
+	text(Vector2(864, 212), "03  /  ТЕСТОВЫЕ ЗОНЫ", 15, Arsenal.CYAN)
+	text(Vector2(864, 293), "КОЛИЧЕСТВО ВРАГОВ ЗА НАЖАТИЕ", 13, muted)
+	text(Vector2(864, 387), "СПАВН НА БОЕВОЙ ПЛОЩАДКЕ / МАКС. 30", 12, muted)
+	text(Vector2(864, 692), "DPS (5 СЕК): %.1f    /    УРОН: %.0f" % [game.lab.dps, game.lab.total_damage], 18, Arsenal.CYAN)
+	text(Vector2(864, 722), "HP %d/%d    /    УРОН x%.2f    /    ТЕМП x%.2f" % [game.player.health, game.player.max_health, game.player.damage_mult, game.player.haste], 15, muted)
+	text(Vector2(64, 749), "Выбор оружия в пульте сбрасывает DPS. Манекены восстанавливаются через 2 секунды без урона.", 15, muted)
+	text(Vector2(64, 873), "B / ESC — закрыть пульт    •    V — сменить перспективу в игре    •    TAB — улучшения", 14, muted)
+
+func lab_action(action: Callable) -> void:
+	action.call()
+	game.sound.play("ui", -14)
+	build_menu()
+
+func build_lab_menu() -> void:
+	for i in 3:
+		var index = i
+		button(Rect2(64 + i * 251, 140, 239, 40), Arsenal.CLASSES[i].name, func(): lab_action(func():
+			game.class_index = index
+			game.lab.reset_build()), Arsenal.CLASSES[i].color, false, game.class_index == i, 15)
+	var ids = Arsenal.WEAPONS.keys()
+	for i in ids.size():
+		var id: String = ids[i]
+		button(Rect2(64 + (i % 3) * 251, 231 + (i / 3) * 58, 239, 48), Arsenal.WEAPONS[id].name, func(): lab_action(func(): game.lab.select_weapon(id)), Arsenal.LIME, false, game.player.weapon == id, 14)
+	var recipes = Arsenal.SPELLS.keys()
+	for i in recipes.size():
+		var key: String = recipes[i]
+		button(Rect2(64 + (i % 2) * 377, 513 + (i / 2) * 41, 365, 33), key + " / " + Arsenal.SPELLS[key].name, func(): lab_action(func():
+			if Arsenal.WEAPONS[game.player.weapon].kind != "magic":
+				game.lab.select_weapon("ember")
+			game.player.spell = key
+			game.player.weapon_model.invoke()
+			game.player.world_weapon.invoke()), Arsenal.VIOLET, false, game.player.spell == key and Arsenal.WEAPONS[game.player.weapon].kind == "magic", 14)
+	for i in 3:
+		var index = i
+		button(Rect2(864 + i * 174, 231, 162, 42), ["ТИР", "БОЙ", "ДВИЖЕНИЕ"][i], func(): lab_action(func(): game.lab.teleport(index)), Arsenal.CYAN, false, game.lab.zone == i, 14)
+	for i in 3:
+		var count = [1, 5, 10][i]
+		button(Rect2(864 + i * 174, 305, 162, 28), str(count), func(): lab_action(func(): game.lab.spawn_count = count), Arsenal.ORANGE, false, game.lab.spawn_count == count, 14)
+	for i in 3:
+		var kind = i
+		button(Rect2(864 + i * 174, 342, 162, 31), ["+ ПРЕСЛЕДОВАТЕЛЬ", "+ СТРЕЛОК", "+ ШТУРМОВИК"][i], func(): lab_action(func(): game.lab.spawn_kind(kind)), Arsenal.ORANGE, false, false, 12)
+	button(Rect2(864, 408, 249, 43), "УБРАТЬ ВРАГОВ / СНАРЯДЫ", func(): lab_action(game.lab.clear_combat), Arsenal.ORANGE, false, false, 12)
+	button(Rect2(1125, 408, 249, 43), "НОВЫЕ МАНЕКЕНЫ", func(): lab_action(game.lab.reset_targets), Arsenal.CYAN, false, false, 14)
+	button(Rect2(864, 468, 249, 43), "НЕУЯЗВИМОСТЬ: " + ("ВКЛ" if game.lab.god_mode else "ВЫКЛ"), func(): lab_action(func(): game.lab.god_mode = not game.lab.god_mode), Arsenal.LIME, false, game.lab.god_mode, 13)
+	button(Rect2(1125, 468, 249, 43), "КАМЕРА: " + ("2D" if game.top_down else "3D"), func(): lab_action(func(): game.set_perspective(not game.top_down)), Arsenal.CYAN, false, false, 15)
+	button(Rect2(864, 528, 249, 43), "ВОССТАНОВИТЬ HP", func(): lab_action(func(): game.player.health = game.player.max_health), Arsenal.LIME, false, false, 14)
+	button(Rect2(1125, 528, 249, 43), "СБРОС БИЛДА / +10 ОЧКОВ", func(): lab_action(game.lab.reset_build), Arsenal.VIOLET, false, false, 12)
+	button(Rect2(864, 588, 249, 43), "ОТКРЫТЬ УЛУЧШЕНИЯ", func():
+		game.state = "UPGRADE"
+		build_menu(), Arsenal.VIOLET, false, false, 14)
+	button(Rect2(1125, 588, 249, 43), "СБРОСИТЬ СЧЁТЧИК УРОНА", func(): lab_action(game.lab.reset_stats), Arsenal.CYAN, false, false, 12)
+	button(Rect2(64, 784, 754, 63), "ПРОДОЛЖИТЬ ТЕСТ  /  B", game.resume_run, Arsenal.LIME, false, true, 22)
+	button(Rect2(864, 784, 510, 63), "ВЕРНУТЬСЯ В ХАБ", game.return_to_hub, Arsenal.CYAN, false, false, 20)

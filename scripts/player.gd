@@ -2,12 +2,18 @@ class_name RiftPlayer
 extends CharacterBody3D
 
 const Arsenal = preload("res://scripts/arsenal.gd")
+const WeaponRig = preload("res://scripts/weapon_rig.gd")
 
 var game: Node3D
 var pivot: Node3D
 var camera: Camera3D
 var model: Node3D
-var weapon_model: Node3D
+var weapon_model: WeaponRig
+var world_weapon: WeaponRig
+var mouse_sway := Vector2.ZERO
+var strike_delay := 0.0
+var pending_weapon := ""
+var pending_spell := ""
 var health := 100.0
 var max_health := 100.0
 var speed := 11.0
@@ -32,6 +38,7 @@ var elements := ""
 var spell := "QQQ"
 var aim := Vector3.FORWARD
 var old_floor := true
+var look_guard := 0.0
 
 func _ready() -> void:
 	collision_layer = 2
@@ -51,11 +58,16 @@ func _ready() -> void:
 	camera.fov = 92
 	camera.far = 220
 	pivot.add_child(camera)
-	weapon_model = Node3D.new()
-	weapon_model.scale = Vector3.ONE * 0.65
+	weapon_model = WeaponRig.new()
+	weapon_model.game = game
+	weapon_model.scale = Vector3.ONE * 0.75
 	camera.add_child(weapon_model)
 	model = Node3D.new()
 	add_child(model)
+	world_weapon = WeaponRig.new()
+	world_weapon.game = game
+	world_weapon.first_person = false
+	model.add_child(world_weapon)
 	game.visual_box(model, Vector3(0, 0.9, 0), Vector3(0.7, 1.3, 0.55), Arsenal.CYAN)
 	game.visual_box(model, Vector3(0, 1.65, -0.08), Vector3(0.48, 0.35, 0.48), Arsenal.LIME)
 	game.visual_box(model, Vector3(0, 1.65, -0.33), Vector3(0.5, 0.08, 0.08), Color.WHITE)
@@ -66,58 +78,46 @@ func equip(id: String) -> void:
 		inventory.append(id)
 	if Arsenal.WEAPONS[id].kind == "magic":
 		spell = Arsenal.spell_key(Arsenal.WEAPONS[id].combo)
-	for child in weapon_model.get_children():
-		weapon_model.remove_child(child)
-		child.queue_free()
-	var kind = Arsenal.WEAPONS[id].kind
-	if kind == "melee":
-		if id == "saws":
-			for side in [-1, 1]:
-				game.visual_box(weapon_model, Vector3(side * 0.5, -0.45, -0.85), Vector3(0.18, 0.22, 1.1), Color("263547"))
-				for i in 9:
-					game.visual_box(weapon_model, Vector3(side * 0.5, -0.31, -0.4 - i * 0.1), Vector3(0.24, 0.08, 0.05), Arsenal.LIME)
-		else:
-			var blade = game.visual_box(weapon_model, Vector3(0.5, -0.05, -0.9), Vector3(0.065, 1.7, 0.12), Color("cee8df"))
-			blade.rotation.z = -0.32
-			game.visual_box(weapon_model, Vector3(0.73, -0.64, -0.9), Vector3(0.4, 0.07, 0.22), Arsenal.LIME)
-			if id in ["scythe", "sickles"]:
-				game.visual_box(weapon_model, Vector3(0.05, 0.6, -0.9), Vector3(0.95, 0.09, 0.12), Arsenal.LIME)
-			if id == "sickles":
-				game.visual_box(weapon_model, Vector3(-0.5, -0.1, -0.9), Vector3(0.06, 0.9, 0.12), Arsenal.LIME)
-	elif kind == "magic":
-		for i in 3:
-			var orb = game.visual_box(weapon_model, Vector3((i - 1) * 0.35, -0.4, -0.85), Vector3.ONE * 0.18, [Arsenal.ORANGE, Arsenal.CYAN, Arsenal.VIOLET][i])
-			orb.rotation = Vector3(0.5, 0.3, 0.7)
-	else:
-		game.visual_box(weapon_model, Vector3(0.4, -0.38, -0.6), Vector3(0.24, 0.3, 0.4), Color("344256"))
-		game.visual_box(weapon_model, Vector3(0.4, -0.29, -0.96), Vector3(0.16, 0.15, 0.85 if id == "rail" else 0.5), Color("83909e"))
-		game.visual_box(weapon_model, Vector3(0.4, -0.21, -0.77), Vector3(0.07, 0.035, 0.34), Arsenal.ORANGE)
-		if id == "scatter":
-			game.visual_box(weapon_model, Vector3(0.58, -0.29, -0.96), Vector3(0.14, 0.15, 0.5), Color("83909e"))
+	cancel_attack()
+	weapon_model.configure(id)
+	world_weapon.configure(id)
 	game.sound.play("pick")
 
 func _unhandled_input(event: InputEvent) -> void:
 	if game.state not in ["RUN", "DROP"]:
 		return
 	if event is InputEventMouseMotion and not game.top_down and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		if look_guard > 0:
+			return
+		mouse_sway += event.relative
 		rotation.y -= event.relative.x * 0.0023
 		pitch = clampf(pitch - event.relative.y * 0.0023, -1.35, 1.35)
 		pivot.rotation.x = pitch
 	if event is InputEventKey and event.pressed and not event.echo:
 		var key = event.physical_keycode if event.physical_keycode != 0 else event.keycode
-		if key in [KEY_Q, KEY_E, KEY_R] and game.class_index == 2:
+		if key in [KEY_Q, KEY_E, KEY_R] and (game.class_index == 2 or game.sandbox):
 			elements += OS.get_keycode_string(key)
 			elements = elements.right(3)
 			game.sound.play("ui", -14, 0.8 + elements.length() * 0.25)
 			game.fx.burst(global_position + Vector3.UP * 1.5, Arsenal.VIOLET, 4, 2)
-		if key == KEY_F and game.class_index == 2:
+		if key == KEY_F and (game.class_index == 2 or game.sandbox):
 			if elements.length() == 3:
 				spell = Arsenal.spell_key(elements)
 				if Arsenal.WEAPONS[weapon].kind != "magic":
-					equip("ember")
+					var focus_id := "ember"
+					for owned in inventory:
+						if Arsenal.WEAPONS[owned].kind == "magic":
+							focus_id = owned
+							break
+					if game.sandbox:
+						game.lab.select_weapon(focus_id)
+					else:
+						equip(focus_id)
 					spell = Arsenal.spell_key(elements)
 				game.notify(Arsenal.SPELLS[spell].name, Arsenal.VIOLET)
 				game.sound.play("invoke")
+				weapon_model.invoke()
+				world_weapon.invoke()
 				game.fx.ring(global_position + Vector3.UP * 0.2, 2.5, Arsenal.VIOLET)
 			else:
 				game.notify("СОБЕРИ 3 СТИХИИ: Q / E / R", Arsenal.VIOLET)
@@ -133,12 +133,14 @@ func _unhandled_input(event: InputEvent) -> void:
 func _physics_process(dt: float) -> void:
 	if game.state not in ["RUN", "DROP"]:
 		return
+	look_guard = maxf(0, look_guard - dt)
 	dash_cooldown = maxf(0, dash_cooldown - dt)
 	attack_cooldown = maxf(0, attack_cooldown - dt)
 	invulnerable = maxf(0, invulnerable - dt)
 	recoil = lerpf(recoil, 0.0, 13.0 * dt)
-	weapon_model.position = Vector3(0.15, -0.25, -0.2) + Vector3(sin(game.elapsed * 11) * velocity.length() * 0.0015, -recoil * 0.2, recoil * 0.25)
-	weapon_model.rotation.z = recoil * -0.45
+	weapon_model.step(dt, Vector2(velocity.x, velocity.z).length(), mouse_sway, game.reduced_fx)
+	world_weapon.step(dt, Vector2(velocity.x, velocity.z).length(), Vector2.ZERO, game.reduced_fx)
+	mouse_sway = mouse_sway.move_toward(Vector2.ZERO, dt * 150)
 	model.visible = game.top_down
 	weapon_model.visible = not game.top_down
 	var input = Input.get_vector("left", "right", "forward", "back")
@@ -156,6 +158,13 @@ func _physics_process(dt: float) -> void:
 		if target != null:
 			aim = (target - global_position - Vector3.UP).normalized()
 			model.rotation.y = atan2(-aim.x, -aim.z) - rotation.y
+	if not pending_weapon.is_empty():
+		strike_delay -= dt
+		if strike_delay <= 0:
+			var id = pending_weapon
+			var invoked = pending_spell
+			pending_weapon = ""
+			perform_attack(id, invoked)
 	if Input.is_action_just_pressed("dash") and dash_cooldown <= 0:
 		dash_direction = direction.normalized() if direction.length() > 0 else Vector3(aim.x, 0, aim.z).normalized()
 		dash_time = 0.17
@@ -205,16 +214,33 @@ func _physics_process(dt: float) -> void:
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and attack_cooldown <= 0 and game.state == "RUN":
 		attack()
 
+func cancel_attack() -> void:
+	pending_weapon = ""
+	pending_spell = ""
+	strike_delay = 0
+
 func attack() -> void:
 	var data = Arsenal.WEAPONS[weapon]
-	attack_cooldown = data.rate / haste
+	var rate: float = Arsenal.SPELLS[spell].rate if data.kind == "magic" else data.rate
+	attack_cooldown = rate / haste
+	weapon_model.strike(attack_cooldown)
+	world_weapon.strike(attack_cooldown)
+	if data.kind == "melee":
+		pending_weapon = weapon
+		pending_spell = spell
+		strike_delay = minf(0.08, attack_cooldown * 0.16)
+	else:
+		perform_attack(weapon, spell)
+
+func perform_attack(id: String, invoked: String) -> void:
+	var data = Arsenal.WEAPONS[id]
 	recoil = 1.0
 	game.shake = maxf(game.shake, 0.045)
 	var origin = global_position + Vector3.UP * 1.2 if game.top_down else camera.global_position
 	var color = Arsenal.CLASSES[game.class_index].color
 	match data.kind:
 		"melee":
-			game.sound.play("slash", -10, 1.5 if weapon == "saws" else 1.0)
+			game.sound.play("slash", -10, 1.5 if id == "saws" else 1.0)
 			for enemy in game.enemies.duplicate():
 				if not is_instance_valid(enemy) or enemy.dead:
 					continue
@@ -223,8 +249,10 @@ func attack() -> void:
 				var flat_aim = Vector3(aim.x, 0, aim.z).normalized()
 				if offset.length() < data.reach and flat.dot(flat_aim) >= data.cone and game.clear_line(origin, enemy.global_position + Vector3.UP):
 					enemy.take_damage(data.damage * damage_mult, flat * 7)
-					if weapon == "sickles":
+					if id == "sickles":
 						health = minf(max_health, health + 1.2)
+			if id == "scythe":
+				game.fx.ring(global_position + Vector3.UP, 4.4, color)
 			var forward = Vector3(aim.x, 0, aim.z).normalized()
 			var side = forward.cross(Vector3.UP)
 			for i in 7:
@@ -243,20 +271,19 @@ func attack() -> void:
 			game.sound.play("slash")
 			game.spawn_projectile(origin, aim, 27, data.damage * damage_mult, Arsenal.LIME, false, true)
 		"magic":
-			var s = Arsenal.SPELLS[spell]
-			attack_cooldown = s.rate / haste
+			var s = Arsenal.SPELLS[invoked]
 			game.sound.play("invoke", -13, 1.25)
-			if spell in ["EEE", "EER", "EQR"]:
-				game.area_damage(global_position + Vector3.UP, s.radius, s.damage * damage_mult, s.color, 2.5 if spell != "EQR" else 0.7, spell == "EQR")
-			elif spell in ["RRR", "ERR"]:
-				game.chain_lightning(origin, aim, s.damage * damage_mult, s.color, spell == "ERR")
-			elif spell == "QRR":
+			if invoked in ["EEE", "EER", "EQR"]:
+				game.area_damage(global_position + Vector3.UP, s.radius, s.damage * damage_mult, s.color, 2.5 if invoked != "EQR" else 0.7, invoked == "EQR")
+			elif invoked in ["RRR", "ERR"]:
+				game.chain_lightning(origin, aim, s.damage * damage_mult, s.color, invoked == "ERR")
+			elif invoked == "QRR":
 				game.hitscan(origin, aim, 80, s.damage * damage_mult, true, s.color)
 			else:
-				game.spawn_projectile(origin, aim, 30, s.damage * damage_mult, s.color, false, false, s.radius, 2.0 if spell == "EEQ" else 0.0)
+				game.spawn_projectile(origin, aim, 30, s.damage * damage_mult, s.color, false, false, s.radius, 2.0 if invoked == "EEQ" else 0.0)
 
 func hurt(amount: float) -> void:
-	if invulnerable > 0 or game.state != "RUN":
+	if invulnerable > 0 or game.state != "RUN" or (game.sandbox and game.lab.god_mode):
 		return
 	health -= amount * (1.0 - armor)
 	invulnerable = 0.3

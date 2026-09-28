@@ -35,7 +35,7 @@ func run() -> void:
 	await wait_frames(3)
 	check(game.state == "MENU", "Scene starts in hub")
 	check(game.centers.size() == 9, "Nine connected sectors")
-	check(game.hud.ui.get_child_count() == 9, "Class, weapon and start buttons exist")
+	check(game.hud.ui.get_child_count() == 10, "Class, weapon and start buttons exist")
 	check(Arsenal.SPELLS.size() == 10, "All ten three-element combinations")
 	check(Arsenal.spell_key("RQE") == "EQR", "Element order is irrelevant")
 	game.start_run()
@@ -70,6 +70,7 @@ func run() -> void:
 	await wait_frames(2)
 	var hp: float = enemy.health
 	game.player.attack()
+	await wait_frames(7)
 	check(enemy.health < hp, "Melee damages a target through physics visibility")
 	enemy.take_damage(10000)
 	check(game.kills == 1 and game.xp == 1, "Kill awards experience")

@@ -7,6 +7,7 @@ const RiftFX = preload("res://scripts/fx.gd")
 const RiftSound = preload("res://scripts/sound.gd")
 const RiftEnemy = preload("res://scripts/enemy.gd")
 const RiftProjectile = preload("res://scripts/projectile.gd")
+const RiftLab = preload("res://scripts/lab.gd")
 
 var state := "MENU"
 var suspended_state := "RUN"
@@ -48,6 +49,8 @@ var material_cache: Dictionary = {}
 var pickups: Array[Dictionary] = []
 var reduced_fx := false
 var run_serial := 0
+var sandbox := false
+var lab: RiftLab
 
 func _ready() -> void:
 	randomize()
@@ -61,6 +64,9 @@ func _ready() -> void:
 	world.game = self
 	add_child(world)
 	world.build()
+	lab = RiftLab.new()
+	lab.game = self
+	add_child(lab)
 	projectiles = Node3D.new()
 	add_child(projectiles)
 	player = RiftPlayer.new()
@@ -97,7 +103,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_ESCAPE:
 				if state in ["RUN", "DROP"]:
 					pause_run()
-				elif state in ["PAUSE", "UPGRADE", "HELP"]:
+				elif state in ["PAUSE", "UPGRADE", "HELP", "LAB"]:
 					resume_run()
 			KEY_TAB:
 				if state == "RUN":
@@ -106,6 +112,14 @@ func _unhandled_input(event: InputEvent) -> void:
 					hud.build_menu()
 				elif state == "UPGRADE":
 					resume_run()
+			KEY_B:
+				if sandbox and state == "RUN":
+					open_lab()
+				elif sandbox and state == "LAB":
+					resume_run()
+			KEY_V:
+				if sandbox and state == "RUN":
+					set_perspective(not top_down)
 			KEY_M:
 				sound.toggle_music()
 			KEY_F1:
@@ -140,19 +154,22 @@ func _process(dt: float) -> void:
 		player.pitch = lerpf(player.pitch, -0.8, dt * 2)
 		player.pivot.rotation.x = player.pitch
 	elif state == "RUN":
-		elapsed += dt
 		combo_timer -= dt
 		if combo_timer <= 0:
 			combo = 0
-		var next_sector = nearest_sector(player.global_position)
-		if next_sector != sector:
-			var offset: Vector3 = player.global_position - centers[next_sector]
-			if abs(offset.x) < 12.5 and abs(offset.z) < 12.5:
-				enter_sector(next_sector)
-		spawn_timer -= dt
-		if spawn_timer <= 0:
-			spawn_wave()
-			spawn_timer = maxf(0.65, 2.8 - elapsed / 150)
+		if sandbox:
+			lab.tick(dt)
+		else:
+			elapsed += dt
+			var next_sector = nearest_sector(player.global_position)
+			if next_sector != sector:
+				var offset: Vector3 = player.global_position - centers[next_sector]
+				if abs(offset.x) < 12.5 and abs(offset.z) < 12.5:
+					enter_sector(next_sector)
+			spawn_timer -= dt
+			if spawn_timer <= 0:
+				spawn_wave()
+				spawn_timer = maxf(0.65, 2.8 - elapsed / 150)
 		update_pickups(dt)
 	if top_down and state != "MENU":
 		top_camera.position = top_camera.position.lerp(player.global_position + Vector3(0, 38, 0.01), minf(1, dt * 12))
@@ -166,6 +183,9 @@ func _process(dt: float) -> void:
 	hud.queue_redraw()
 
 func start_run() -> void:
+	sandbox = false
+	lab.visible = false
+	fx.clear_all()
 	# A run is fully reset without rebuilding the world or reloading a scene.
 	run_serial += 1
 	for e in enemies:
@@ -212,6 +232,7 @@ func start_run() -> void:
 	player.rotation = Vector3.ZERO
 	player.pitch = -0.5
 	player.old_floor = false
+	player.look_guard = 0.12
 	player.camera.current = true
 	player.model.visible = false
 	player.weapon_model.visible = true
@@ -243,11 +264,15 @@ func pause_run() -> void:
 	hud.build_menu()
 
 func resume_run() -> void:
+	player.look_guard = 0.12
 	state = suspended_state
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if top_down else Input.MOUSE_MODE_CAPTURED
 	hud.build_menu()
 
 func return_to_hub() -> void:
+	player.cancel_attack()
+	sandbox = false
+	lab.visible = false
 	state = "MENU"
 	top_down = false
 	top_camera.projection = Camera3D.PROJECTION_PERSPECTIVE
@@ -257,7 +282,21 @@ func return_to_hub() -> void:
 
 func enter_sector(index: int) -> void:
 	sector = index
-	top_down = index % 2 == 1
+	set_perspective(index % 2 == 1)
+	sound.play("portal", -9)
+	if not visited.has(index):
+		visited.append(index)
+		points += 1
+		player.health = minf(player.max_health, player.health + 25)
+		notify("%02d / %s  •  +1 ОЧКО [TAB]" % [index + 1, RiftWorld.ROOM_NAMES[index]], Arsenal.CYAN)
+	else:
+		notify("%02d / %s" % [index + 1, RiftWorld.ROOM_NAMES[index]], Arsenal.VIOLET if top_down else Arsenal.CYAN)
+	player.invulnerable = 1.3
+	spawn_wave()
+
+func set_perspective(flat: bool) -> void:
+	player.look_guard = 0.12
+	top_down = flat
 	transition = 0.65
 	if top_down:
 		top_camera.h_offset = 0
@@ -272,19 +311,42 @@ func enter_sector(index: int) -> void:
 		player.camera.current = true
 		player.pitch = 0
 		player.pivot.rotation.x = 0
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if state == "RUN" else Input.MOUSE_MODE_VISIBLE
 	player.model.visible = top_down
 	player.weapon_model.visible = not top_down
-	sound.play("portal", -9)
-	if not visited.has(index):
-		visited.append(index)
-		points += 1
-		player.health = minf(player.max_health, player.health + 25)
-		notify("%02d / %s  •  +1 ОЧКО [TAB]" % [index + 1, RiftWorld.ROOM_NAMES[index]], Arsenal.CYAN)
-	else:
-		notify("%02d / %s" % [index + 1, RiftWorld.ROOM_NAMES[index]], Arsenal.VIOLET if top_down else Arsenal.CYAN)
-	player.invulnerable = 1.3
-	spawn_wave()
+
+func start_sandbox() -> void:
+	start_run()
+	sandbox = true
+	lab.build()
+	lab.visible = true
+	state = "RUN"
+	suspended_state = "RUN"
+	lab.reset_session()
+	player.attack_cooldown = 0.25
+	set_perspective(false)
+	hud.build_menu()
+
+func open_lab() -> void:
+	if not sandbox:
+		return
+	suspended_state = "RUN"
+	state = "LAB"
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	hud.build_menu()
+
+func enemy_target(pos: Vector3) -> Vector3:
+	if sandbox:
+		return lab.navigation_target(pos)
+	var room = nearest_sector(pos)
+	return player.position if room == sector else centers[room + (1 if sector > room else -1)]
+
+func report_hit(enemy: RiftEnemy, amount: float) -> void:
+	fx.damage_number(enemy.position + Vector3.UP * 2.1, amount, enemy.color)
+	player.weapon_model.impact()
+	player.world_weapon.impact()
+	if sandbox:
+		lab.record_damage(amount)
 
 func nearest_sector(pos: Vector3) -> int:
 	var result := 0
@@ -297,6 +359,8 @@ func nearest_sector(pos: Vector3) -> int:
 	return result
 
 func spawn_wave() -> void:
+	if sandbox:
+		return
 	var count = 2 + mini(4, int(elapsed / 35))
 	for i in count:
 		if enemies.size() >= 48:
@@ -321,10 +385,12 @@ func enemy_killed(enemy: RiftEnemy) -> void:
 	combo += 1
 	combo_timer = 4.0
 	best_combo = maxi(best_combo, combo)
-	xp += 3 if enemy.kind == 2 else 1
 	sound.play("kill", -16, minf(1.6, 0.9 + combo * 0.02))
 	if (class_index == 0 and enemy.position.distance_to(player.position) < 8) or player.lifesteal:
 		player.health = minf(player.max_health, player.health + (4 if player.lifesteal else 2))
+	if sandbox:
+		return
+	xp += 3 if enemy.kind == 2 else 1
 	if xp >= xp_goal:
 		xp -= xp_goal
 		level += 1
@@ -468,6 +534,14 @@ func upgrade(id: int) -> void:
 	hud.build_menu()
 
 func end_run() -> void:
+	player.cancel_attack()
+	if sandbox:
+		lab.clear_combat()
+		player.health = player.max_health
+		lab.teleport(lab.zone)
+		open_lab()
+		notify("ТЕСТ ЗАВЕРШЁН / HP ВОССТАНОВЛЕНЫ", Arsenal.ORANGE)
+		return
 	state = "OVER"
 	if elapsed > best:
 		best = elapsed

@@ -56,7 +56,43 @@ func ring(pos: Vector3, radius: float, color: Color) -> void:
 		var b = TAU * (i + 1) / 24.0
 		beam(pos + Vector3(cos(a), 0, sin(a)) * radius, pos + Vector3(cos(b), 0, sin(b)) * radius, color, 0.09, 0.22)
 
+func clear_all() -> void:
+	for bit in bits:
+		if is_instance_valid(bit.node):
+			bit.node.queue_free()
+	bits.clear()
+
+func damage_number(pos: Vector3, amount: float, color: Color) -> void:
+	if bits.size() >= 450:
+		return
+	var node = Label3D.new()
+	node.text = str(roundi(amount))
+	node.font_size = 48
+	node.pixel_size = 0.012
+	node.modulate = color
+	node.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	node.outline_size = 7
+	add_child(node)
+	node.position = pos + Vector3(randf_range(-0.25, 0.25), 0, 0)
+	bits.append({"node": node, "velocity": Vector3.UP * 1.7, "life": 0.65, "max": 0.65, "gravity": false})
+
+func dismantle(visual: Node3D, push: Vector3) -> void:
+	if not enabled:
+		return
+	for part in visual.get_children():
+		if not part is MeshInstance3D or not part.visible or bits.size() >= 450:
+			continue
+		var chunk = MeshInstance3D.new()
+		chunk.mesh = part.mesh
+		chunk.material_override = part.material_override
+		add_child(chunk)
+		chunk.global_transform = part.global_transform
+		var velocity = Vector3(randf_range(-5, 5), randf_range(3, 7), randf_range(-5, 5)) + push * 0.4
+		bits.append({"node": chunk, "velocity": velocity, "life": 1.15, "max": 1.15, "gravity": true, "spin": Vector3(randf(), randf(), randf()) * 14})
+
 func _process(dt: float) -> void:
+	if get_parent().state not in ["RUN", "DROP"]:
+		return
 	for i in range(bits.size() - 1, -1, -1):
 		var p = bits[i]
 		p.life -= dt
@@ -67,4 +103,6 @@ func _process(dt: float) -> void:
 		if p.gravity:
 			p.velocity.y -= 13.0 * dt
 		p.node.position += p.velocity * dt
+		if p.has("spin"):
+			p.node.rotation += p.spin * dt
 		p.node.scale = Vector3.ONE * maxf(0.01, p.life / p.max)

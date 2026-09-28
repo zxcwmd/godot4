@@ -4,3 +4,6 @@ exports/
 .DS_Store
 assets/music/breakcore.ogg
 assets/music/breakcore.mp3
+.rift-write-test-*/
+__pycache__/
+*.pyc

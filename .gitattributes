@@ -1,0 +1,6 @@
+# Keep hashes and Godot resources identical across Git checkouts and ZIP releases.
+* text=auto eol=lf
+*.wav -text
+*.png -text
+*.zip -text
+CHECK_PROJECT.cmd -text whitespace=cr-at-eol

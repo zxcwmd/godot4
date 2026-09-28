@@ -12,42 +12,69 @@ func texture(kind: String) -> Texture2D:
 	rng.seed = hash(kind) + 913
 	for y in 64:
 		for x in 64:
-			var value = 0.78 + rng.randf_range(-0.09, 0.09)
+			var value = 0.78 + rng.randf_range(-0.04, 0.04)
 			match kind:
 				"stone":
 					if y % 16 < 2 or (x + (16 if (y / 16) % 2 else 0)) % 32 < 2:
-						value = 0.32
+						value = 0.6
 					elif y % 16 == 2:
-						value = 0.98
+						value = 0.9
 				"floor":
 					if x % 32 < 2 or y % 32 < 2:
-						value = 0.3
+						value = 0.62
 					elif (x + y) % 12 < 2 and y % 8 < 4:
-						value = 0.93
+						value = 0.88
 				"metal":
 					if x % 32 < 2 or y % 32 < 2:
-						value = 0.35
+						value = 0.64
 					if x % 32 in [4, 27] and y % 32 in [4, 27]:
-						value = 0.99
+						value = 0.92
 					if y % 16 == 7 and x % 32 > 12:
 						value *= 0.75
 				"cloth": value = 0.6 + float((x + y) % 2) * 0.25 + rng.randf_range(-0.08, 0.08)
 				"skin": value = 0.82 + rng.randf_range(-0.06, 0.06)
 				"flesh":
 					value = 0.65 + sin(x * 0.4 + cos(y * 0.2) * 3) * 0.2 + rng.randf_range(-0.08, 0.08)
-				"hazard": value = 0.15 if (x + y) % 24 < 12 else 0.95
+				"hazard": value = 0.55 if (x + y) % 24 < 12 else 0.95
 			image.set_pixel(x, y, Color(value, value, value))
 	textures[kind] = ImageTexture.create_from_image(image)
 	return textures[kind]
+
+var outlines := true
+var outline_material: StandardMaterial3D
+
+## Cold industrial palette: every lit surface is remapped by brightness onto a
+## navy -> steel -> ice ramp, so old warm hex colours can never leak back in.
+## Skin keeps a natural (slightly cooled) tone; flesh leans violet.
+static func cold(color: Color, kind: String) -> Color:
+	var l = clampf(color.get_luminance() * 1.15, 0, 1)
+	if kind == "skin":
+		return color.lerp(Color("c9a894"), 0.3)
+	var ramp = Color("14171d").lerp(Color("4a5263"), l * 1.6) if l < 0.62 else Color("4a5263").lerp(Color("c5ccd8"), (l - 0.62) / 0.38)
+	if kind == "flesh":
+		return ramp.lerp(Color("7a3f78"), 0.55)
+	if kind == "hazard":
+		return ramp.lerp(Color("37b8d8"), 0.35)
+	return ramp
+
+func outline() -> StandardMaterial3D:
+	if outline_material == null:
+		outline_material = StandardMaterial3D.new()
+		outline_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		outline_material.albedo_color = Color("05070d")
+		outline_material.cull_mode = BaseMaterial3D.CULL_FRONT
+		outline_material.grow = true
+		outline_material.grow_amount = 0.022
+	return outline_material
 
 func material(kind: String, color: Color, glow: bool = false) -> StandardMaterial3D:
 	var key = kind + str(color) + str(glow)
 	if materials.has(key):
 		return materials[key]
 	var m = StandardMaterial3D.new()
-	m.albedo_color = color
+	m.albedo_color = color if glow else cold(color, kind)
 	m.roughness = 0.85
-	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST_WITH_MIPMAPS
 	if glow:
 		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		m.emission_enabled = true
@@ -56,7 +83,16 @@ func material(kind: String, color: Color, glow: bool = false) -> StandardMateria
 		m.albedo_texture = texture(kind)
 		m.uv1_triplanar = true
 		m.uv1_scale = Vector3.ONE * (0.5 if kind in ["stone", "floor"] else 2.0)
-		m.metallic = 0.3 if kind == "metal" else 0
+		m.metallic = 0
+		# Cel shading: hard light bands and a single crisp highlight.
+		m.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
+		m.specular_mode = BaseMaterial3D.SPECULAR_TOON
+		m.roughness = 0.55 if kind == "metal" else 0.9
+		m.rim_enabled = true
+		m.rim = 0.35
+		m.rim_tint = 0.8
+		if outlines:
+			m.next_pass = outline()
 	materials[key] = m
 	return m
 
@@ -187,10 +223,16 @@ func crate(parent: Node3D, pos: Vector3, size: float = 1.5) -> void:
 	box(parent, pos + Vector3.UP * size / 2, Vector3.ONE * size, Color("5f6755"), "metal")
 	for side in [-1, 1]:
 		box(parent, pos + Vector3(side * size * 0.39, size / 2, 0), Vector3(size * 0.08, size * 1.04, size * 1.04), Color("8c896a"))
-	box(parent, pos + Vector3(0, size * 0.6, -size * 0.51), Vector3(size * 0.55, size * 0.25, 0.02), Color("ccae5f"), "hazard")
+	box(parent, pos + Vector3(0, size * 0.6, -size * 0.51), Vector3(size * 0.55, size * 0.25, 0.02), Color("37b8d8"), "hazard")
 
 func health_pickup(parent: Node3D, pos: Vector3) -> MeshInstance3D:
 	var root = box(parent, pos, Vector3(0.5, 0.38, 0.32), Color("b6b99d"))
-	box(root, Vector3(0, 0, -0.18), Vector3(0.09, 0.25, 0.035), Color("b6ff65"), "metal", true)
-	box(root, Vector3(0, 0, -0.18), Vector3(0.27, 0.085, 0.035), Color("b6ff65"), "metal", true)
+	box(root, Vector3(0, 0, -0.18), Vector3(0.09, 0.25, 0.035), Color("7df3ff"), "metal", true)
+	box(root, Vector3(0, 0, -0.18), Vector3(0.27, 0.085, 0.035), Color("7df3ff"), "metal", true)
 	return root
+
+func set_outlines(enabled: bool) -> void:
+	outlines = enabled
+	for m in materials.values():
+		if m.shading_mode != BaseMaterial3D.SHADING_MODE_UNSHADED:
+			m.next_pass = outline() if enabled else null

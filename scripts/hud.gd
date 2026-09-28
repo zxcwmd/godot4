@@ -9,6 +9,10 @@ var ui: Control
 var ink := Color("e8eff5")
 var muted := Color("8293a9")
 var dark := Color("0b1220")
+var kill_pop := 0.0
+var seen_kills := 0
+var hp_shown := 100.0
+const RANKS = [[0, "", "СТАНЬ ОПАСНЕЕ"], [2, "D", "ДЕРЗКО"], [5, "C", "ЖЕСТОКО"], [10, "B", "БЕСПОЩАДНО"], [18, "A", "АПОКАЛИПСИС"], [30, "S", "СИНГУЛЯРНОСТЬ"], [50, "SSS", "RIFT//RUSH"]]
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -18,7 +22,13 @@ func _ready() -> void:
 	add_child(ui)
 	build_menu()
 
-func _process(_dt: float) -> void:
+func _process(dt: float) -> void:
+	kill_pop = maxf(0, kill_pop - dt * 3)
+	if game.kills > seen_kills:
+		kill_pop = 1
+	seen_kills = game.kills
+	if game.player:
+		hp_shown = move_toward(hp_shown, game.player.health, dt * 60)
 	ui.scale = get_viewport_rect().size / Vector2(1440, 900)
 
 func text(at: Vector2, content: String, size: int = 18, color: Color = Color("e8eff5")) -> void:
@@ -27,6 +37,20 @@ func text(at: Vector2, content: String, size: int = 18, color: Color = Color("e8
 func panel(rect: Rect2, color: Color = Color(0.035, 0.055, 0.09, 0.94), border: Color = Color("253044")) -> void:
 	draw_rect(rect, color)
 	draw_rect(rect, border, false, 1)
+
+func slant(rect: Rect2, color: Color, skew: float = 14) -> void:
+	draw_colored_polygon(PackedVector2Array([rect.position + Vector2(skew, 0), rect.position + Vector2(rect.size.x + skew, 0), rect.end - Vector2(skew, 0) + Vector2(0, 0), Vector2(rect.position.x - skew, rect.end.y)]), color)
+
+func big(at: Vector2, content: String, size: int, color: Color) -> void:
+	draw_string(font, at + Vector2(4, 4), content, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color(0, 0, 0, 0.7))
+	draw_string(font, at, content, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
+
+func rank() -> Array:
+	var r = RANKS[0]
+	for entry in RANKS:
+		if game.combo >= entry[0]:
+			r = entry
+	return r
 
 func line(a: Vector2, b: Vector2, color: Color = Color("253044"), width: float = 1.0) -> void:
 	draw_line(a, b, color, width, true)
@@ -54,8 +78,8 @@ func draw_hub() -> void:
 	text(Vector2(48, 37), "R//R     НЕЙРОАРЕНА", 17, Arsenal.LIME)
 	text(Vector2(1090, 37), "СИГНАЛ АКТИВЕН     •     200 BPM", 14, Arsenal.CYAN)
 	text(Vector2(64, 96), "БЕСКОНЕЧНЫЙ ЗАБЕГ  /  ОДНА ЖИЗНЬ", 14, muted)
-	text(Vector2(54, 202), "RIFT//", 112, ink)
-	text(Vector2(54, 310), "RUSH", 128, Arsenal.LIME)
+	big(Vector2(54, 202), "RIFT//", 112, ink)
+	big(Vector2(54, 310), "RUSH", 128, Arsenal.CYAN)
 	draw_rect(Rect2(433, 236, 145, 34), Arsenal.ORANGE)
 	text(Vector2(446, 260), "NO SIGNAL LOST", 13, dark)
 	text(Vector2(65, 355), "ПАДАЙ ГЛУБЖЕ. ДВИГАЙСЯ БЫСТРЕЕ.", 18, ink)
@@ -89,23 +113,33 @@ func draw_hub() -> void:
 
 func draw_game() -> void:
 	var p = game.player
-	panel(Rect2(30, 26, 365, 84))
-	draw_rect(Rect2(30, 26, 4, 84), Arsenal.LIME)
-	text(Vector2(50, 51), "R//R   •   " + ("FLATLINE / 2D" if game.top_down else "PERSPECTIVE / 3D"), 13, Arsenal.LIME)
-	text(Vector2(50, 88), "%02d" % ((game.lab.zone if game.sandbox else game.sector) + 1), 30, ink)
-	text(Vector2(102, 85), game.lab.NAMES[game.lab.zone] if game.sandbox else RiftWorld.ROOM_NAMES[game.sector], 14, muted)
-	panel(Rect2(610, 26, 220, 87))
-	text(Vector2(656, 51), "RIFT LAB / ПОЛИГОН" if game.sandbox else "ВРЕМЯ В ЖИВЫХ", 12, muted)
-	text(Vector2(635 if game.sandbox else 649, 94), "SANDBOX" if game.sandbox else game.clock(game.elapsed), 29 if game.sandbox else 39, Arsenal.CYAN if game.sandbox else ink)
-	panel(Rect2(1138, 26, 270, 84))
-	text(Vector2(1158, 53), "УБИЙСТВА", 12, muted)
-	text(Vector2(1158, 89), "%03d" % game.kills, 32, Arsenal.ORANGE)
-	text(Vector2(1260, 53), "УРОВЕНЬ", 12, muted)
-	text(Vector2(1278, 89), "%02d" % game.level, 32, ink)
+	# Aggressive HUD: big shadowed numbers on slanted blades, no boxed panels.
+	slant(Rect2(34, 30, 380, 62), Color(0.02, 0.04, 0.09, 0.82))
+	draw_rect(Rect2(22, 30, 6, 62), Arsenal.CYAN)
+	text(Vector2(52, 52), ("FLATLINE / 2D" if game.top_down else "PERSPECTIVE / 3D"), 12, Arsenal.CYAN)
+	big(Vector2(52, 86), "%02d" % ((game.lab.zone if game.sandbox else game.sector) + 1), 30, ink)
+	text(Vector2(104, 83), game.lab.NAMES[game.lab.zone] if game.sandbox else RiftWorld.ROOM_NAMES[game.sector], 15, muted)
+	if game.sandbox:
+		big(Vector2(622, 84), "SANDBOX", 44, Arsenal.CYAN)
+	else:
+		big(Vector2(610, 90), game.clock(game.elapsed), 62, ink)
+		text(Vector2(662, 112), "ВРЕМЯ В ЖИВЫХ", 12, muted)
+	var pop = 1.0 + kill_pop * 0.35
+	slant(Rect2(1150, 30, 250, 62), Color(0.02, 0.04, 0.09, 0.82))
+	big(Vector2(1168, 88), "%03d" % game.kills, int(40 * pop), Arsenal.ORANGE.lerp(Color.WHITE, kill_pop * 0.6))
+	text(Vector2(1170, 50), "УБИЙСТВ", 11, muted)
+	text(Vector2(1300, 50), "УРОВЕНЬ", 11, muted)
+	big(Vector2(1300, 88), "%02d" % game.level, 28, ink)
+	var r = rank()
 	if game.combo > 1:
-		text(Vector2(55, 172), "%02d ×" % game.combo, 42, Arsenal.ORANGE)
-		text(Vector2(57, 199), "НЕ СБАВЛЯЙ ТЕМП", 12, muted)
-		draw_rect(Rect2(57, 210, 150 * clampf(game.combo_timer / 4, 0, 1), 3), Arsenal.ORANGE)
+		var t = clampf(game.combo_timer / 4, 0, 1)
+		var rank_color = [Arsenal.CYAN, Arsenal.CYAN, Arsenal.VIOLET, Arsenal.VIOLET, Arsenal.ORANGE, Arsenal.ORANGE, Color.WHITE][RANKS.find(r)]
+		slant(Rect2(1160, 330, 240, 128), Color(0.02, 0.04, 0.09, 0.78), 18)
+		big(Vector2(1180, 425), r[1], 92, rank_color)
+		text(Vector2(1180 + 60 * r[1].length(), 372), r[2], 14, rank_color)
+		big(Vector2(1180 + 60 * r[1].length(), 420), "×%d" % game.combo, 34, ink)
+		draw_rect(Rect2(1180, 440, 200, 6), Color(1, 1, 1, 0.12))
+		draw_rect(Rect2(1180, 440, 200 * t, 6), rank_color)
 	# Crosshair remains diegetic: centered in FPS, follows mouse in overhead mode.
 	var cross = Vector2(720, 450)
 	if game.top_down:
@@ -134,26 +168,37 @@ func draw_game() -> void:
 	if game.hit_marker > 0:
 		for dir in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]:
 			line(cross + dir * 14, cross + dir * 20, Arsenal.ORANGE, 2)
-	panel(Rect2(30, 754, 370, 111))
-	text(Vector2(50, 783), "ЖИЗНЕННЫЙ СИГНАЛ", 12, muted)
-	text(Vector2(50, 825), "%03d" % ceili(p.health), 38, Arsenal.LIME if p.health > 30 else Arsenal.ORANGE)
-	text(Vector2(137, 823), "/ %d" % p.max_health, 18, muted)
-	draw_rect(Rect2(50, 843, 330, 5), Color("253044"))
-	draw_rect(Rect2(50, 843, 330 * p.health / p.max_health, 5), Arsenal.LIME if p.health > 30 else Arsenal.ORANGE)
-	text(Vector2(243, 782), "SHIFT / РЫВОК", 12, Arsenal.CYAN)
-	draw_rect(Rect2(244, 801, 132, 7), Color("253044"))
-	draw_rect(Rect2(244, 801, 132 * (1 - p.dash_cooldown / 1.1), 7), Arsenal.CYAN)
-	text(Vector2(264, 833), "ГОТОВ" if p.dash_cooldown <= 0 else "%.1f с" % p.dash_cooldown, 14, muted)
-	panel(Rect2(1040, 754, 368, 111))
-	text(Vector2(1060, 781), "АКТИВНОЕ ОРУЖИЕ  /  ∞", 12, muted)
-	text(Vector2(1060, 813), Arsenal.WEAPONS[p.weapon].name, 20, Arsenal.CLASSES[game.class_index].color)
-	text(Vector2(1060, 842), "КОЛЕСО / 1–9   •   АРСЕНАЛ: %02d" % p.inventory.size(), 13, muted)
-	text(Vector2(530, 851), "TAB  УЛУЧШЕНИЯ   •   F1  СПРАВКА", 14, muted)
+	var low = p.health <= p.max_health * 0.3
+	var hp_color = Arsenal.ORANGE if low else Arsenal.CYAN
+	if low:
+		hp_color = hp_color.lerp(Color.WHITE, 0.5 + sin(game.real_time * 10) * 0.5)
+	slant(Rect2(40, 758, 400, 108), Color(0.02, 0.04, 0.09, 0.82), 18)
+	big(Vector2(56, 836), "%d" % ceili(p.health), 76, hp_color)
+	text(Vector2(64 + font.get_string_size("%d" % ceili(p.health), HORIZONTAL_ALIGNMENT_LEFT, -1, 76).x, 834), "/ %d  HP" % p.max_health, 17, muted)
+	# Segmented health: white "ghost" drains behind the real value.
+	for i in 20:
+		var x = 58 + i * 18
+		var f = float(i) / 20.0
+		var c = Color(1, 1, 1, 0.1)
+		if f < hp_shown / p.max_health:
+			c = Color(1, 1, 1, 0.75)
+		if f < p.health / p.max_health:
+			c = hp_color
+		slant(Rect2(x, 848, 14, 9), c, 3)
+	text(Vector2(276, 790), "SHIFT", 12, muted)
+	for i in 4:
+		var dash_ok = 1 - p.dash_cooldown / 1.1 > (i + 1) / 4.0 - 0.01
+		slant(Rect2(322 + i * 26, 780, 20, 11), Arsenal.CYAN if dash_ok else Color(1, 1, 1, 0.12), 4)
+	slant(Rect2(1010, 758, 390, 108), Color(0.02, 0.04, 0.09, 0.82), 18)
+	text(Vector2(1030, 784), "АРСЕНАЛ %02d   •   1–9 / КОЛЕСО" % p.inventory.size(), 12, muted)
+	big(Vector2(1030, 834), Arsenal.WEAPONS[p.weapon].name, 34, Arsenal.CLASSES[game.class_index].color)
+	draw_rect(Rect2(1030, 848, 340 * (1 - clampf(p.attack_cooldown / maxf(0.01, Arsenal.WEAPONS[p.weapon].rate), 0, 1)), 4), Arsenal.CLASSES[game.class_index].color)
+	text(Vector2(600, 880), "TAB  УЛУЧШЕНИЯ   •   F1  СПРАВКА", 13, muted)
 	if game.points > 0:
 		panel(Rect2(542, 777, 355, 45), Color("253c28"), Arsenal.LIME)
 		text(Vector2(564, 806), "+%d  ОЧКИ УЛУЧШЕНИЯ  [TAB]" % game.points, 16, Arsenal.LIME)
-	draw_rect(Rect2(30, 884, 1378, 3), Color("253044"))
-	draw_rect(Rect2(30, 884, 1378.0 * game.xp / game.xp_goal, 3), Arsenal.VIOLET)
+	draw_rect(Rect2(0, 893, 1440, 7), Color(0, 0, 0, 0.5))
+	draw_rect(Rect2(0, 893, 1440.0 * game.xp / game.xp_goal, 7), Arsenal.VIOLET)
 	if game.class_index == 2 or (game.sandbox and Arsenal.WEAPONS[p.weapon].kind == "magic"):
 		panel(Rect2(450, 660, 540, 76))
 		text(Vector2(470, 689), "Q  ОГОНЬ     E  ЛЁД     R  МОЛНИЯ", 13, muted)
@@ -181,6 +226,9 @@ func draw_game() -> void:
 	if game.state == "DROP":
 		text(Vector2(462, 385), "ВНИЗ ПО КРОЛИЧЬЕЙ НОРЕ", 29, Arsenal.LIME)
 		text(Vector2(586, 425), "СИГНАЛ СКОРО ВОССТАНОВИТСЯ", 12, ink)
+	if p.health <= p.max_health * 0.3 and game.state == "RUN":
+		for k in 6:
+			draw_rect(Rect2(k * 6, k * 6, 1440 - k * 12, 900 - k * 12), Color(1, 0.2, 0.25, 0.05 + sin(game.real_time * 6) * 0.02), false, 6)
 	if game.hurt_flash > 0:
 		var c = Color(1, 0.12, 0.05, game.hurt_flash * 0.7)
 		draw_rect(Rect2(0, 0, 1440, 900), c, false, 16)
@@ -210,7 +258,7 @@ func draw_pause() -> void:
 	heading("R//R  /  СИГНАЛ ПРИОСТАНОВЛЕН", "ПЕРЕДЫШКА.", "Время и враги замерли. Твой забег ждёт.")
 	text(Vector2(122, 335), "Время  " + game.clock(game.elapsed) + "     /     Убийства  " + str(game.kills), 26, Arsenal.CYAN)
 	text(Vector2(122, 695), "M  музыка: " + ("ВЫКЛ" if game.sound.muted else "ВКЛ"), 18, muted)
-	text(Vector2(735, 731), "F4  ретро-фильтр вкл/выкл", 18, muted)
+	text(Vector2(735, 731), "F4  контуры вкл/выкл", 18, muted)
 	text(Vector2(122, 731), "F3  эффекты и тени: " + ("СНИЖЕНЫ" if game.reduced_fx else "ПОЛНЫЕ"), 18, muted)
 
 func draw_upgrades() -> void:

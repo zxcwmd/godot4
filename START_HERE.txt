@@ -1,8 +1,8 @@
-RIFT RUSH 0.3.1 — ЗАПУСК НА WINDOWS
+RIFT RUSH 0.4.0 — ЗАПУСК НА WINDOWS
 
 1. Закрой Godot. Не запускай project.godot прямо из окна ZIP-архива.
 2. Распакуй ВЕСЬ архив в НОВУЮ папку, например:
-   %LOCALAPPDATA%\RiftRush-0.3.1
+   %LOCALAPPDATA%\RiftRush-0.4.0
    Этот путь можно вставить в адресную строку Проводника.
    Не распаковывай поверх старой копии и не используй Program Files/OneDrive.
 3. В папке с project.godot обязательно должны быть:

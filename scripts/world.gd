@@ -22,24 +22,27 @@ func build() -> void:
 	environment.background_mode = Environment.BG_SKY
 	var sky = Sky.new()
 	var sky_material = ProceduralSkyMaterial.new()
-	sky_material.sky_top_color = Color("182631")
-	sky_material.sky_horizon_color = Color("736856")
-	sky_material.ground_bottom_color = Color("16191c")
-	sky_material.ground_horizon_color = Color("736856")
+	sky_material.sky_top_color = Color("060a16")
+	sky_material.sky_horizon_color = Color("1d2e4f")
+	sky_material.ground_bottom_color = Color("04060c")
+	sky_material.ground_horizon_color = Color("1d2e4f")
 	sky.sky_material = sky_material
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color("a9b5bb")
+	environment.ambient_light_color = Color("98a4bb")
 	environment.ambient_light_energy = 0.55
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	environment.glow_enabled = true
+	environment.glow_intensity = 0.7
+	environment.glow_bloom = 0.08
 	environment.fog_enabled = true
-	environment.fog_light_color = Color("363e40")
-	environment.fog_density = 0.0025
+	environment.fog_light_color = Color("1b2233")
+	environment.fog_density = 0.006
 	env.environment = environment
 	add_child(env)
 	sun = DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-53, -28, 0)
-	sun.light_color = Color("ffe0a5")
+	sun.light_color = Color("cfe0ff")
 	sun.light_energy = 1.4
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 105
@@ -70,7 +73,7 @@ func nav_point(pos: Vector3) -> int:
 
 func build_room(index: int) -> void:
 	var center: Vector3 = game.centers[index]
-	var accent = Color("dca95d") if index % 2 == 0 else Color("9ddab4")
+	var accent = Arsenal.CYAN if index % 2 == 0 else Arsenal.VIOLET
 	var root = Node3D.new()
 	root.name = "Sector%02d" % (index + 1)
 	add_child(root)
@@ -165,8 +168,8 @@ func build_room(index: int) -> void:
 		game.art.box(console, Vector3(0, 0.26, 0), Vector3(1.1, 0.03, 0.65), accent, "metal", true)
 		var lamp = OmniLight3D.new()
 		lamp.position = center + Vector3(s * 18, 9, -16)
-		lamp.light_color = Color("ffc58a") if s == 1 else Color("a0dac1")
-		lamp.light_energy = 3
+		lamp.light_color = Arsenal.CYAN if s == 1 else Color("dfe8ff")
+		lamp.light_energy = 4
 		lamp.omni_range = 30
 		root.add_child(lamp)
 		lights.append(lamp)
@@ -227,7 +230,7 @@ func build_corridor(a: Vector3, b: Vector3, _index: int) -> void:
 	var direction = flat.normalized()
 	var start = a + direction * ROOM_HALF
 	var finish = b - direction * ROOM_HALF
-	build_ramp(self, start, finish, 12, Color("b8c291"))
+	build_ramp(self, start, finish, 12, Arsenal.CYAN)
 	for side in [-1, 1]:
 		var p = (start + finish) / 2 + direction.cross(Vector3.UP) * side * 6.2
 		solid(p + Vector3.UP * 0.7, Vector3(0.4, 1.4, 26) if abs(direction.z) > 0 else Vector3(26, 1.4, 0.4), Color("666554"))
@@ -331,7 +334,7 @@ func build_hub() -> void:
 		game.art.actor(statue, "player", Arsenal.CLASSES[i].color)
 		wall_label(self, pos + Vector3(0, 4.5, 0), Arsenal.CLASSES[i].tag, Arsenal.CLASSES[i].color, 38)
 		game.art.crate(self, pos + Vector3(1.6, 0, -1.8), 1.1)
-	wall_label(self, Vector3(0, 37, -10), "RIFT // TRANSIT AUTHORITY", Color("dcca93"), 50)
+	wall_label(self, Vector3(0, 37, -10), "RIFT // TRANSIT AUTHORITY", Arsenal.CYAN, 50)
 
 func permanent_line(a: Vector3, b: Vector3, color: Color, parent: Node3D = self) -> void:
 	var mesh = game.art.box(parent, (a + b) / 2, Vector3(0.13, 0.055, a.distance_to(b)), color, "metal", true)

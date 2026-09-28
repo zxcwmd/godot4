@@ -45,7 +45,7 @@ def generate(root: Path) -> None:
                      and p.suffix not in {".pyc", ".uid", ".import"}
                      and p.relative_to(root).as_posix() not in OPTIONAL_MUSIC)
     entries = {p.relative_to(root).as_posix(): digest(p) for p in sorted(set(files))}
-    data = {"format": 1, "version": "0.3.1", "algorithm": "SHA-256", "files": entries}
+    data = {"format": 1, "version": "0.4.0", "algorithm": "SHA-256", "files": entries}
     (root / MANIFEST).write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"Manifest generated: {len(entries)} files")
 
@@ -121,7 +121,7 @@ def main() -> int:
     if args.generate:
         generate(root)
         return 0
-    print(f"RIFT RUSH 0.3.1 — integrity check\nProject: {root}")
+    print(f"RIFT RUSH 0.4.0 — integrity check\nProject: {root}")
     problems = check_files(root) + check_resources(root)
     if not args.no_write_probe:
         folders = [root, root / "scenes"]

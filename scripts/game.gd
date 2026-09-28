@@ -27,7 +27,6 @@ var sector := 0
 var visited: Array[int] = [0]
 var top_down := false
 var art = RetroArt.new()
-var retro_overlay: ColorRect
 var elapsed := 0.0
 var real_time := 0.0
 var kills := 0
@@ -82,16 +81,6 @@ func _ready() -> void:
 	top_camera.position = Vector3(27, 49, 30)
 	top_camera.look_at(Vector3(0, 29, -2))
 	top_camera.current = true
-	var post = CanvasLayer.new()
-	post.layer = -1
-	add_child(post)
-	retro_overlay = ColorRect.new()
-	retro_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	retro_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var effect = ShaderMaterial.new()
-	effect.shader = load("res://shaders/retro_screen.gdshader")
-	retro_overlay.material = effect
-	post.add_child(retro_overlay)
 	var canvas = CanvasLayer.new()
 	add_child(canvas)
 	hud = load("res://scripts/hud.gd").new()
@@ -141,7 +130,7 @@ func _unhandled_input(event: InputEvent) -> void:
 					Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 					hud.build_menu()
 			KEY_F4:
-				retro_overlay.visible = not retro_overlay.visible
+				art.set_outlines(not art.outlines)
 			KEY_F3:
 				reduced_fx = not reduced_fx
 				fx.enabled = not reduced_fx

@@ -79,7 +79,7 @@ func damage_number(pos: Vector3, amount: float, color: Color) -> void:
 func dismantle(visual: Node3D, push: Vector3) -> void:
 	if not enabled:
 		return
-	for part in visual.get_children():
+	for part in visual.find_children("*", "MeshInstance3D", true, false):
 		if not part is MeshInstance3D or not part.visible or bits.size() >= 450:
 			continue
 		var chunk = MeshInstance3D.new()

@@ -91,7 +91,7 @@ func draw_game() -> void:
 	var p = game.player
 	panel(Rect2(30, 26, 365, 84))
 	draw_rect(Rect2(30, 26, 4, 84), Arsenal.LIME)
-	text(Vector2(50, 51), "R//R   •   " + ("FLATLINE / 2D" if game.top_down else "PERSPECTIVE / 3D"), 13, Arsenal.LIME)
+	text(Vector2(50, 51), "R//R   •   " + ("SIDE / 2D" if game.side_view else ("FLATLINE / 2D" if game.top_down else "PERSPECTIVE / 3D")), 13, Arsenal.LIME)
 	text(Vector2(50, 88), "%02d" % ((game.lab.zone if game.sandbox else game.sector) + 1), 30, ink)
 	text(Vector2(102, 85), game.lab.NAMES[game.lab.zone] if game.sandbox else RiftWorld.ROOM_NAMES[game.sector], 14, muted)
 	panel(Rect2(610, 26, 220, 87))
@@ -115,7 +115,7 @@ func draw_game() -> void:
 		var screen_scale = get_viewport_rect().size / Vector2(1440, 900)
 		var marker = game.top_camera.unproject_position(p.global_position + Vector3.UP) / screen_scale
 		draw_circle(marker, 18, Arsenal.CYAN, false, 2.0, true)
-		var aim_2d = Vector2(p.aim.x, p.aim.z).normalized()
+		var aim_2d = Vector2(p.aim.x, -p.aim.y if game.side_view else p.aim.z).normalized()
 		line(marker + aim_2d * 20, marker + aim_2d * 31, Arsenal.LIME, 3)
 	var active_camera: Camera3D = game.top_camera if game.top_down else p.camera
 	for enemy in game.enemies:
@@ -175,6 +175,20 @@ func draw_game() -> void:
 		text(Vector2(50, 390), "НЕУЯЗВИМОСТЬ: " + ("ВКЛ" if game.lab.god_mode else "ВЫКЛ"), 12, Arsenal.LIME)
 		panel(Rect2(1025, 135, 383, 55))
 		text(Vector2(1042, 169), "B  ПУЛЬТ ПОЛИГОНА   /   V  3D <> 2D", 15, Arsenal.CYAN)
+	if game.challenge.remaining > 0:
+		panel(Rect2(460, 218, 520, 93), Color("291c1a"), Arsenal.ORANGE)
+		draw_rect(Rect2(477, 231, 58, 57), Arsenal.ORANGE)
+		text(Vector2(492, 272), "C", 37, dark)
+		text(Vector2(553, 252), "СМЕНИ ПЕРСПЕКТИВУ!", 23, ink)
+		text(Vector2(553, 280), ("СБОКУ > СВЕРХУ" if game.side_view else "СВЕРХУ > СБОКУ") + "  /  %.1f С" % game.challenge.remaining, 16, Arsenal.ORANGE)
+		draw_rect(Rect2(477, 298, 486 * game.challenge.remaining / 2.0, 4), Arsenal.ORANGE)
+	elif game.top_down:
+		text(Vector2(550, 211), "ПЕРЕЛОМ / C:  %.0f С" % game.challenge.cooldown, 13, muted)
+	if game.side_view:
+		text(Vector2(525, 626), "A / D  ДВИЖЕНИЕ   •   SPACE  ПРЫЖОК", 16, Arsenal.CYAN)
+	if not game.sandbox:
+		var floor_index = clampi(roundi((p.position.y - game.centers[game.sector].y) / 6), 0, 3)
+		text(Vector2(50, 128), "ЭТАЖ %d / 4" % (floor_index + 1), 13, Arsenal.CYAN)
 	if game.state == "DROP":
 		text(Vector2(462, 385), "ВНИЗ ПО КРОЛИЧЬЕЙ НОРЕ", 29, Arsenal.LIME)
 		text(Vector2(586, 425), "СИГНАЛ СКОРО ВОССТАНОВИТСЯ", 12, ink)
@@ -191,10 +205,10 @@ func draw_map(origin: Vector2) -> void:
 	text(origin + Vector2(0, 0), "КАРТА СИГНАЛА", 11, muted)
 	for i in game.centers.size():
 		var c: Vector3 = game.centers[i]
-		var p = origin + Vector2(c.x * 1.25 + 65, c.z * 1.1 + 163)
+		var p = origin + Vector2(c.x * 0.65 + 65, c.z * 0.6 + 163)
 		if i > 0:
 			var prev: Vector3 = game.centers[i - 1]
-			line(p, origin + Vector2(prev.x * 1.25 + 65, prev.z * 1.1 + 163), Color("475269"), 2)
+			line(p, origin + Vector2(prev.x * 0.65 + 65, prev.z * 0.6 + 163), Color("475269"), 2)
 		draw_rect(Rect2(p - Vector2(7, 7), Vector2(14, 14)), Arsenal.LIME if i == game.sector else (Arsenal.VIOLET if i % 2 else Arsenal.CYAN).darkened(0.6))
 
 func heading(kicker: String, title: String, subtitle: String) -> void:
@@ -207,7 +221,8 @@ func draw_pause() -> void:
 	heading("R//R  /  СИГНАЛ ПРИОСТАНОВЛЕН", "ПЕРЕДЫШКА.", "Время и враги замерли. Твой забег ждёт.")
 	text(Vector2(122, 335), "Время  " + game.clock(game.elapsed) + "     /     Убийства  " + str(game.kills), 26, Arsenal.CYAN)
 	text(Vector2(122, 695), "M  музыка: " + ("ВЫКЛ" if game.sound.muted else "ВКЛ"), 18, muted)
-	text(Vector2(122, 731), "F3  частицы и тряска: " + ("СНИЖЕНЫ" if game.reduced_fx else "ПОЛНЫЕ"), 18, muted)
+	text(Vector2(735, 731), "F4  ретро-фильтр вкл/выкл", 18, muted)
+	text(Vector2(122, 731), "F3  эффекты и тени: " + ("СНИЖЕНЫ" if game.reduced_fx else "ПОЛНЫЕ"), 18, muted)
 
 func draw_upgrades() -> void:
 	heading("R//R  /  ПЕРЕПРОШИВКА", "СТАНЬ ОПАСНЕЕ.", "Доступно очков: %d   /   Каждое улучшение стоит 1 очко. Время остановлено." % game.points)
@@ -388,5 +403,6 @@ func build_lab_menu() -> void:
 		game.state = "UPGRADE"
 		build_menu(), Arsenal.VIOLET, false, false, 14)
 	button(Rect2(1125, 588, 249, 43), "СБРОСИТЬ СЧЁТЧИК УРОНА", func(): lab_action(game.lab.reset_stats), Arsenal.CYAN, false, false, 12)
+	button(Rect2(864, 643, 510, 29), "ТЕСТ СОБЫТИЯ C / 2 СЕКУНДЫ / -15% HP", func(): lab_action(game.challenge.preview), Arsenal.ORANGE, false, false, 13)
 	button(Rect2(64, 784, 754, 63), "ПРОДОЛЖИТЬ ТЕСТ  /  B", game.resume_run, Arsenal.LIME, false, true, 22)
 	button(Rect2(864, 784, 510, 63), "ВЕРНУТЬСЯ В ХАБ", game.return_to_hub, Arsenal.CYAN, false, false, 20)

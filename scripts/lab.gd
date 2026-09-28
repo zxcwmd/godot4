@@ -66,6 +66,7 @@ func build() -> void:
 			var pos = (a + b) / 2 + delta.cross(Vector3.UP) * side * 5.1 + Vector3.UP * 0.6
 			game.world.solid(pos, Vector3(0.3, 1.2, 14) if abs(delta.z) > 0 else Vector3(14, 1.2, 0.3), Color("263447"), self)
 			game.visual_box(self, pos + Vector3.UP * 0.65, Vector3(0.3, 0.08, 14) if abs(delta.z) > 0 else Vector3(14, 0.08, 0.3), Arsenal.CYAN)
+	game.world.build_side_stage(ZONES[1])
 	# Firing line and measured target stands. Three clear lanes.
 	for lane in 3:
 		var x = (lane - 1) * 6
@@ -159,11 +160,17 @@ func spawn_kind(kind: int) -> void:
 		e.kind = kind
 		var angle = (active + i) * 2.4
 		e.position = ZONES[1] + Vector3(cos(angle) * 9, 0.1, sin(angle) * 9)
+		if game.side_view:
+			e.side_member = true
+			e.side_origin = e.position
+			e.position = game.side_center + Vector3(cos(angle) * 19, 0.1, 0)
 		game.enemies.append(e)
 		game.add_child(e)
 	game.notify("ВРАГИ НА БОЕВОЙ ПЛОЩАДКЕ  /  МАКС. 30", Arsenal.ORANGE)
 
 func teleport(index: int) -> void:
+	if game.side_view:
+		game.set_side_view(false)
 	zone = index
 	game.player.position = ZONES[index] + Vector3(0, 0.2, 8) if index != 2 else ZONES[index] + Vector3(-9, 0.2, 0)
 	game.player.velocity = Vector3.ZERO
@@ -211,3 +218,7 @@ func navigation_target(pos: Vector3) -> Vector3:
 	if here == there:
 		return game.player.position
 	return ZONES[1] if here != 1 and there != 1 else ZONES[there]
+
+func show_side(enabled: bool) -> void:
+	for mesh in find_children("*", "GeometryInstance3D", true, false):
+		mesh.visible = not enabled or mesh.global_position.z < ZONES[1].z - 3 or mesh.global_position.y < 0

@@ -19,7 +19,13 @@ var hits: Array[int] = []
 var visual: MeshInstance3D
 
 func _ready() -> void:
-	visual = game.visual_box(self, Vector3.ZERO, Vector3(0.7, 0.08, 0.7) if disc else Vector3.ONE * (0.3 if hostile else 0.22), color)
+	if disc:
+		visual = game.art.cylinder(self, Vector3.ZERO, 0.35, 0.06, Color("b8b9a5"))
+		for i in 4:
+			var edge = game.art.box(visual, Vector3.ZERO, Vector3(0.8, 0.05, 0.09), color, "metal", true)
+			edge.rotation.y = i * PI / 4
+	else:
+		visual = game.art.orb(self, Vector3.ZERO, Vector3.ONE * (0.35 if hostile else 0.26), color, "metal", true)
 
 func _physics_process(dt: float) -> void:
 	if game.state != "RUN":

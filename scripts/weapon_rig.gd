@@ -18,9 +18,9 @@ var sequence := 0
 var sway := Vector2.ZERO
 var active := false
 var primary: Node3D
-const STEEL = Color("bdced6")
-const BODY = Color("253346")
-const RUBBER = Color("0d1522")
+const STEEL = Color("b8b9a5")
+const BODY = Color("697167")
+const RUBBER = Color("303a30")
 
 func configure(id: String) -> void:
 	for child in get_children():
@@ -46,15 +46,19 @@ func configure(id: String) -> void:
 		hands.append(other)
 	for i in hands.size():
 		var hand = hands[i]
-		box(hand, Vector3(0, -0.11, 0.09), Vector3(0.19, 0.2, 0.25), BODY)
-		box(hand, Vector3(0, -0.08, 0.22), Vector3(0.2, 0.1, 0.055), Arsenal.CYAN)
+		var forearm = game.art.cylinder(hand, Vector3(0, -0.12, 0.34), 0.115, 0.45, Color("59604c"), 0.1, "cloth", 6)
+		forearm.rotation.x = PI / 2
+		game.art.orb(hand, Vector3(0, -0.10, 0.09), Vector3(0.20, 0.23, 0.23), Color("b7916c"))
+		box(hand, Vector3(0, -0.08, 0.22), Vector3(0.23, 0.12, 0.08), Color("6b715b"))
+		for finger in 4:
+			game.art.orb(hand, Vector3(-0.067 + finger * 0.045, -0.045, -0.014), Vector3(0.04, 0.105, 0.055), Color("b7916c"))
 		match id:
 			"katana", "rapier":
 				box(hand, Vector3(0, 0, 0.02), Vector3(0.10, 0.10, 0.32), RUBBER)
 				for j in 5:
 					box(hand, Vector3(0, 0.058, 0.12 - j * 0.055), Vector3(0.105, 0.016, 0.026), Arsenal.LIME)
 				var length = 1.65 if id == "rapier" else 1.30
-				box(hand, Vector3(0, 0, -length / 2 - 0.15), Vector3(0.035 if id == "rapier" else 0.10, 0.028, length), STEEL)
+				game.art.blade(hand, Vector3(0, 0, -0.15), length, 0.035 if id == "rapier" else 0.105, STEEL, 0.06 if id == "katana" else 0.0)
 				box(hand, Vector3(0.05, 0.004, -0.78), Vector3(0.013, 0.035, 1.27), Arsenal.LIME)
 				box(hand, Vector3(0, 0, -0.14), Vector3(0.37, 0.065, 0.07), Arsenal.LIME)
 				if id == "rapier":
@@ -74,6 +78,12 @@ func configure(id: String) -> void:
 					moving_parts.append({"node": tooth, "kind": "tooth", "phase": j / 16.0})
 			"revolver", "rail", "scatter":
 				box(hand, Vector3(0, 0, -0.20), Vector3(0.23, 0.23, 0.5), BODY)
+				var grip = box(hand, Vector3(0, -0.22, -0.06), Vector3(0.17, 0.32, 0.15), RUBBER)
+				grip.rotation.x = -0.25
+				for bolt in [-1, 1]:
+					game.art.orb(hand, Vector3(bolt * 0.125, 0.025, -0.12), Vector3(0.035, 0.05, 0.06), STEEL, "metal")
+				for slot in 3:
+					box(hand, Vector3(0.12, 0.02, -0.25 - slot * 0.065), Vector3(0.012, 0.10, 0.025), RUBBER)
 				var length = 1.1 if id == "rail" else 0.66
 				cylinder(hand, Vector3(0, 0.055, -0.38 - length / 2), 0.065, length, STEEL)
 				if id == "revolver":
@@ -102,12 +112,14 @@ func configure(id: String) -> void:
 			_:
 				if kind == "magic":
 					for j in 3:
-						var orb = box(hand, Vector3.ZERO, Vector3.ONE * 0.14, [Arsenal.ORANGE, Arsenal.CYAN, Arsenal.VIOLET][j])
+						var orb = game.art.orb(hand, Vector3.ZERO, Vector3.ONE * 0.17, [Arsenal.ORANGE, Arsenal.CYAN, Arsenal.VIOLET][j], "metal", true)
 						moving_parts.append({"node": orb, "kind": "orb", "phase": j * TAU / 3})
+	for part in find_children("*", "GeometryInstance3D", true, false):
+		part.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if first_person else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	step(0, 0, Vector2.ZERO, false)
 
 func box(parent: Node3D, pos: Vector3, size: Vector3, color: Color) -> MeshInstance3D:
-	return game.visual_box(parent, pos, size, color)
+	return game.art.box(parent, pos, size, color, "cloth" if color == RUBBER else "metal", color in [Arsenal.LIME, Arsenal.ORANGE, Arsenal.VIOLET, Arsenal.CYAN])
 
 func cylinder(parent: Node3D, pos: Vector3, radius: float, length: float, color: Color) -> MeshInstance3D:
 	var n = box(parent, pos, Vector3.ONE, color)
@@ -115,7 +127,7 @@ func cylinder(parent: Node3D, pos: Vector3, radius: float, length: float, color:
 	mesh.top_radius = radius
 	mesh.bottom_radius = radius
 	mesh.height = length
-	mesh.radial_segments = 12
+	mesh.radial_segments = 8
 	n.mesh = mesh
 	n.rotation.x = PI / 2
 	return n

@@ -8,6 +8,8 @@ const RiftSound = preload("res://scripts/sound.gd")
 const RiftEnemy = preload("res://scripts/enemy.gd")
 const RiftProjectile = preload("res://scripts/projectile.gd")
 const RiftLab = preload("res://scripts/lab.gd")
+const RetroArt = preload("res://scripts/retro_art.gd")
+const PerspectiveEvent = preload("res://scripts/perspective_event.gd")
 
 var state := "MENU"
 var suspended_state := "RUN"
@@ -21,10 +23,17 @@ var hud: Control
 var top_camera: Camera3D
 var enemies: Array[RiftEnemy] = []
 var projectiles: Node3D
-var centers: Array[Vector3] = [Vector3(0, 0, 0), Vector3(0, 0, -40), Vector3(40, 6, -40), Vector3(40, 6, -80), Vector3(0, 0, -80), Vector3(-40, -6, -80), Vector3(-40, -6, -120), Vector3(0, 0, -120), Vector3(40, 6, -120)]
+var centers: Array[Vector3] = [Vector3(0, 0, 0), Vector3(0, 0, -76), Vector3(76, 8, -76), Vector3(76, 8, -152), Vector3(0, 0, -152), Vector3(-76, -8, -152), Vector3(-76, -8, -228), Vector3(0, 0, -228), Vector3(76, 8, -228)]
 var sector := 0
 var visited: Array[int] = [0]
 var top_down := false
+var side_view := false
+var side_center := Vector3.ZERO
+var side_plane_z := 0.0
+var side_return := Vector3.ZERO
+var art = RetroArt.new()
+var challenge = PerspectiveEvent.new()
+var retro_overlay: ColorRect
 var elapsed := 0.0
 var real_time := 0.0
 var kills := 0
@@ -54,6 +63,7 @@ var lab: RiftLab
 
 func _ready() -> void:
 	randomize()
+	challenge.game = self
 	setup_input()
 	load_record()
 	fx = RiftFX.new()
@@ -72,13 +82,23 @@ func _ready() -> void:
 	player = RiftPlayer.new()
 	player.game = self
 	add_child(player)
-	player.position = Vector3(0, 24, 8)
+	player.position = Vector3(0, 30, 8)
 	top_camera = Camera3D.new()
-	top_camera.far = 280
+	top_camera.far = 460
 	add_child(top_camera)
-	top_camera.position = Vector3(27, 43, 30)
-	top_camera.look_at(Vector3(0, 23, -2))
+	top_camera.position = Vector3(27, 49, 30)
+	top_camera.look_at(Vector3(0, 29, -2))
 	top_camera.current = true
+	var post = CanvasLayer.new()
+	post.layer = -1
+	add_child(post)
+	retro_overlay = ColorRect.new()
+	retro_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	retro_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var effect = ShaderMaterial.new()
+	effect.shader = load("res://shaders/retro_screen.gdshader")
+	retro_overlay.material = effect
+	post.add_child(retro_overlay)
 	var canvas = CanvasLayer.new()
 	add_child(canvas)
 	hud = load("res://scripts/hud.gd").new()
@@ -112,6 +132,8 @@ func _unhandled_input(event: InputEvent) -> void:
 					hud.build_menu()
 				elif state == "UPGRADE":
 					resume_run()
+			KEY_C:
+				challenge.respond()
 			KEY_B:
 				if sandbox and state == "RUN":
 					open_lab()
@@ -127,9 +149,12 @@ func _unhandled_input(event: InputEvent) -> void:
 					state = "HELP"
 					Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 					hud.build_menu()
+			KEY_F4:
+				retro_overlay.visible = not retro_overlay.visible
 			KEY_F3:
 				reduced_fx = not reduced_fx
 				fx.enabled = not reduced_fx
+				world.visibility_key = ""
 				notify("ЭФФЕКТЫ: " + ("СНИЖЕНЫ" if reduced_fx else "ПОЛНЫЕ"), Arsenal.CYAN)
 			KEY_ENTER:
 				if state == "MENU":
@@ -145,8 +170,8 @@ func _process(dt: float) -> void:
 	transition = move_toward(transition, 0, dt)
 	notice_time = maxf(0, notice_time - dt)
 	if state == "MENU":
-		top_camera.position = Vector3(27 + sin(real_time * 0.13) * 3, 42, 31)
-		top_camera.look_at(Vector3(0, 23, -2))
+		top_camera.position = Vector3(27 + sin(real_time * 0.13) * 3, 48, 31)
+		top_camera.look_at(Vector3(0, 29, -2))
 		top_camera.h_offset = -10
 		top_camera.v_offset = -8
 	elif state == "DROP":
@@ -164,17 +189,23 @@ func _process(dt: float) -> void:
 			var next_sector = nearest_sector(player.global_position)
 			if next_sector != sector:
 				var offset: Vector3 = player.global_position - centers[next_sector]
-				if abs(offset.x) < 12.5 and abs(offset.z) < 12.5:
+				if not side_view and abs(offset.x) < 24.5 and abs(offset.z) < 24.5:
 					enter_sector(next_sector)
 			spawn_timer -= dt
 			if spawn_timer <= 0:
 				spawn_wave()
 				spawn_timer = maxf(0.65, 2.8 - elapsed / 150)
+		challenge.tick(dt)
 		update_pickups(dt)
 	if top_down and state != "MENU":
-		top_camera.position = top_camera.position.lerp(player.global_position + Vector3(0, 38, 0.01), minf(1, dt * 12))
-		# Exactly overhead orthographic view: WASD stays aligned to the screen.
-		top_camera.rotation_degrees = Vector3(-90, 0, 0)
+		if side_view:
+			var target = Vector3(player.position.x, maxf(side_center.y + 5, player.position.y + 3.5), side_plane_z + 48)
+			top_camera.position = top_camera.position.lerp(target, minf(1, dt * 10))
+			top_camera.rotation = Vector3.ZERO
+		else:
+			top_camera.position = top_camera.position.lerp(player.global_position + Vector3(0, 45, 0.01), minf(1, dt * 12))
+			top_camera.rotation_degrees = Vector3(-90, 0, 0)
+	world.update_visibility()
 	if state in ["RUN", "DROP"]:
 		var s = 0.0 if reduced_fx else shake
 		player.camera.h_offset = randf_range(-s, s)
@@ -183,6 +214,11 @@ func _process(dt: float) -> void:
 	hud.queue_redraw()
 
 func start_run() -> void:
+	if side_view:
+		set_side_view(false)
+	challenge.reset()
+	challenge.successes = 0
+	challenge.misses = 0
 	sandbox = false
 	lab.visible = false
 	fx.clear_all()
@@ -227,7 +263,7 @@ func start_run() -> void:
 	player.elements = ""
 	player.inventory.clear()
 	player.equip(selected_weapon)
-	player.position = Vector3(0, 25.5, 0)
+	player.position = Vector3(0, 31.5, 0)
 	player.velocity = Vector3(0, -4, 0)
 	player.rotation = Vector3.ZERO
 	player.pitch = -0.5
@@ -270,6 +306,9 @@ func resume_run() -> void:
 	hud.build_menu()
 
 func return_to_hub() -> void:
+	if side_view:
+		set_side_view(false)
+	challenge.reset()
 	player.cancel_attack()
 	sandbox = false
 	lab.visible = false
@@ -295,6 +334,9 @@ func enter_sector(index: int) -> void:
 	spawn_wave()
 
 func set_perspective(flat: bool) -> void:
+	if side_view:
+		set_side_view(false)
+	challenge.reset()
 	player.look_guard = 0.12
 	top_down = flat
 	transition = 0.65
@@ -302,7 +344,7 @@ func set_perspective(flat: bool) -> void:
 		top_camera.h_offset = 0
 		top_camera.v_offset = 0
 		top_camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-		top_camera.size = 36
+		top_camera.size = 44 if not sandbox else 36
 		top_camera.position = player.global_position + Vector3(0, 38, 0.01)
 		top_camera.rotation_degrees = Vector3(-90, 0, 0)
 		top_camera.current = true
@@ -314,6 +356,51 @@ func set_perspective(flat: bool) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if state == "RUN" else Input.MOUSE_MODE_VISIBLE
 	player.model.visible = top_down
 	player.weapon_model.visible = not top_down
+
+func set_side_view(enabled: bool) -> void:
+	if side_view == enabled:
+		return
+	if enabled and not top_down:
+		return
+	side_view = enabled
+	for p in projectiles.get_children():
+		p.queue_free()
+	player.cancel_attack()
+	player.velocity = Vector3.ZERO
+	if enabled:
+		side_return = player.position
+		side_center = lab.ZONES[1] if sandbox else centers[sector]
+		side_plane_z = side_center.z
+		player.position = Vector3(clampf(player.position.x, side_center.x - 21, side_center.x + 21), side_center.y + 0.2, side_plane_z)
+		top_camera.size = 29
+		top_camera.position = Vector3(player.position.x, side_center.y + 5, side_plane_z + 48)
+		top_camera.rotation = Vector3.ZERO
+		var n := 0
+		for e in enemies:
+			if not is_instance_valid(e) or e.dead or e.practice_target:
+				continue
+			e.side_origin = e.position
+			e.side_member = true
+			e.position = side_center + Vector3(-20 + fposmod(n * 7.3, 40), 0.2, 0)
+			e.velocity = Vector3.ZERO
+			e.nav_path.clear()
+			n += 1
+	else:
+		player.position = side_return
+		for e in enemies:
+			if is_instance_valid(e) and e.side_member:
+				e.position = e.side_origin
+				e.velocity = Vector3.ZERO
+				e.side_member = false
+				e.nav_path.clear()
+		top_camera.size = 44 if not sandbox else 36
+		top_camera.position = player.position + Vector3(0, 45, 0.01)
+		top_camera.rotation_degrees = Vector3(-90, 0, 0)
+	world.show_side(centers.size() if sandbox else sector, enabled)
+	if sandbox:
+		lab.show_side(enabled)
+	player.invulnerable = 0.5
+	notify("СБОКУ / A-D + SPACE / ПРИЦЕЛ МЫШЬЮ" if enabled else "СВЕРХУ / WASD / ГЛУБИНА ВОССТАНОВЛЕНА", Arsenal.CYAN)
 
 func start_sandbox() -> void:
 	start_run()
@@ -338,8 +425,7 @@ func open_lab() -> void:
 func enemy_target(pos: Vector3) -> Vector3:
 	if sandbox:
 		return lab.navigation_target(pos)
-	var room = nearest_sector(pos)
-	return player.position if room == sector else centers[room + (1 if sector > room else -1)]
+	return player.position
 
 func report_hit(enemy: RiftEnemy, amount: float) -> void:
 	fx.damage_number(enemy.position + Vector3.UP * 2.1, amount, enemy.color)
@@ -368,15 +454,22 @@ func spawn_wave() -> void:
 		var center: Vector3 = centers[sector]
 		var pos = center
 		for attempt in 10:
-			pos = center + Vector3(randf_range(-10, 10), 0.2, randf_range(-10, 10))
+			pos = center + Vector3(randf_range(-21, 21), 0.2, randf_range(-21, 21))
 			if pos.distance_to(player.position) > 8:
 				break
 		if pos.distance_to(player.position) < 6:
 			continue
+		var floor_index = clampi(roundi((player.position.y - center.y) / 6), 0, 3)
+		if floor_index > 0 and not side_view:
+			pos = center + Vector3(randf_range(-20, 20), floor_index * 6 + 0.1, 20 if randf() < 0.5 else -20)
 		var enemy = RiftEnemy.new()
 		enemy.game = self
 		enemy.kind = 2 if elapsed > 35 and randf() < 0.18 else (1 if randf() < 0.3 else 0)
 		enemy.position = pos
+		if side_view:
+			enemy.side_origin = pos
+			enemy.side_member = true
+			enemy.position = side_center + Vector3(-20 if randf() < 0.5 else 20, 0.2, 0)
 		enemies.append(enemy)
 		add_child(enemy)
 
@@ -409,7 +502,7 @@ func enemy_killed(enemy: RiftEnemy) -> void:
 			notify("НОВОЕ ОРУЖИЕ: " + Arsenal.WEAPONS[id].name + "  [" + str(player.inventory.size()) + "]", Arsenal.ORANGE)
 			sound.play("pick", -7)
 	if randf() < 0.22:
-		var node = visual_box(self, enemy.position + Vector3.UP * 0.7, Vector3.ONE * 0.45, Arsenal.LIME)
+		var node = art.health_pickup(self, enemy.position + Vector3.UP * 0.7)
 		pickups.append({"node": node, "age": 0.0})
 
 func update_pickups(dt: float) -> void:
@@ -567,17 +660,7 @@ func visual_box(parent: Node3D, pos: Vector3, size: Vector3, color: Color, unsha
 	var box = BoxMesh.new()
 	box.size = size
 	mesh.mesh = box
-	var key = str(color) + str(unshaded)
-	if not material_cache.has(key):
-		var m = StandardMaterial3D.new()
-		m.albedo_color = color
-		m.roughness = 0.68
-		if unshaded:
-			m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-			m.emission_enabled = true
-			m.emission = color
-		material_cache[key] = m
-	mesh.material_override = material_cache[key]
+	mesh.material_override = art.material("metal", color, unshaded and color.s > 0.4 and color.v > 0.65)
 	parent.add_child(mesh)
 	mesh.position = pos
 	return mesh

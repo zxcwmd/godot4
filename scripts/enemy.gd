@@ -21,6 +21,10 @@ var room := 0
 var warning: MeshInstance3D
 var practice_target := false
 var target_recovery := 0.0
+var side_member := false
+var side_origin := Vector3.ZERO
+var nav_path := PackedVector3Array()
+var nav_timer := 0.0
 
 func _ready() -> void:
 	collision_layer = 4
@@ -45,19 +49,16 @@ func _ready() -> void:
 		color = Arsenal.CYAN
 	visual = Node3D.new()
 	add_child(visual)
-	var s = 1.4 if kind == 2 else 1.0
-	game.visual_box(visual, Vector3(0, 1, 0) * s, Vector3(0.7, 0.85, 0.55) * s, Color("262a3e"))
-	game.visual_box(visual, Vector3(0, 1.65, 0) * s, Vector3(0.6, 0.4, 0.55) * s, color)
-	game.visual_box(visual, Vector3(0, 1.65, -0.29) * s, Vector3(0.42, 0.07, 0.04) * s, Color.WHITE)
-	for side in [-1, 1]:
-		game.visual_box(visual, Vector3(side * 0.48, 0.95, 0) * s, Vector3(0.18, 0.7, 0.22) * s, color)
-		game.visual_box(visual, Vector3(side * 0.22, 0.25, 0) * s, Vector3(0.19, 0.5, 0.22) * s, Color("47506b"))
+	game.art.actor(visual, "target" if practice_target else ["scavenger", "robot", "beast"][kind], color)
+	var s = 1.25 if kind == 2 else 1.0
 	warning = game.visual_box(visual, Vector3(0, 2.15, 0) * s, Vector3(0.22, 0.22, 0.22), Color.WHITE)
 	warning.visible = false
 	game.fx.ring(global_position + Vector3.UP * 0.15, 1.3, color)
 
 func _physics_process(dt: float) -> void:
 	if dead or game.state != "RUN":
+		return
+	if game.side_view and not side_member:
 		return
 	age += dt
 	cooldown -= dt
@@ -77,8 +78,33 @@ func _physics_process(dt: float) -> void:
 		queue_free()
 		return
 	var target: Vector3 = game.enemy_target(global_position)
+	if game.side_view:
+		if target.y > position.y + 0.8:
+			var step_index = clampi(int(floor((position.y - game.side_center.y + 0.2) / 1.2)) + 1, 1, 5)
+			target = game.side_center + Vector3(-18 + step_index * 5, step_index * 1.2, 0)
+			if is_on_floor() and abs(target.x - position.x) < 5.5:
+				velocity.y = 9.5
+	elif not game.sandbox:
+		nav_timer -= dt
+		var needs_route = abs(target.y - position.y) > 2.5 or position.y - game.centers[game.nearest_sector(position)].y > 2.5 or not game.clear_line(position + Vector3.UP, target + Vector3.UP)
+		if needs_route:
+			if nav_timer <= 0 or nav_path.is_empty():
+				nav_path = game.world.route(position, target)
+				nav_timer = 2.0
+				if nav_path.size() > 1:
+					var segment = nav_path[1] - nav_path[0]
+					var progress = (position - nav_path[0]).dot(segment) / maxf(0.01, segment.length_squared())
+					var on_path = nav_path[0] + segment * clampf(progress, 0, 1)
+					if progress > 0 and position.distance_to(on_path) < 3:
+						nav_path.remove_at(0)
+			while nav_path.size() > 1 and position.distance_to(nav_path[0]) < 1.4:
+				nav_path.remove_at(0)
+			if not nav_path.is_empty():
+				target = nav_path[0]
 	var direction = target - global_position
 	direction.y = 0
+	if game.side_view:
+		direction.z = 0
 	direction = direction.normalized()
 	if direction.length() > 0.1:
 		visual.rotation.y = lerp_angle(visual.rotation.y, atan2(-direction.x, -direction.z), 8 * dt)
@@ -91,15 +117,23 @@ func _physics_process(dt: float) -> void:
 			continue
 		var apart = global_position - other.global_position
 		apart.y = 0
+		if game.side_view:
+			apart.z = 0
 		if apart.length_squared() < 1.5 and apart.length_squared() > 0.01:
 			movement += apart.normalized() * 2.5
 	velocity.x = movement.x + knockback.x
 	velocity.z = movement.z + knockback.z
 	velocity.y -= 24 * dt
 	knockback = knockback.move_toward(Vector3.ZERO, dt * 30)
+	if game.side_view:
+		velocity.z = 0
 	move_and_slide()
+	if game.side_view:
+		position.z = game.side_plane_z
+		position.x = clampf(position.x, game.side_center.x - 23, game.side_center.x + 23)
 	visual.position.y = sin(age * 9) * 0.06
 	warning.visible = cooldown < 0.38
+	game.art.animate_actor(visual, velocity.length(), age, clampf(1 - cooldown / 0.38, 0, 1))
 	if cooldown <= 0:
 		if kind == 1 and distance < 28 and game.clear_line(global_position + Vector3.UP * 1.5, game.player.global_position + Vector3.UP):
 			var origin = global_position + Vector3.UP * 1.5

@@ -7,7 +7,6 @@ const ROOM_NAMES = ["НИЖНИЙ АТРИУМ", "ЗАЛ ПЕРЕЛОМА", "Л�
 var game: Node3D
 var floor_material: Material
 var room_roots: Array[Node3D] = []
-var side_stages: Array[Node3D] = []
 var room_meshes: Array[Array] = []
 var navigation = AStar3D.new()
 var floor_nodes: Dictionary = {}
@@ -184,7 +183,6 @@ func build_room(index: int) -> void:
 			permanent_line(tip, tip - direction - right, Arsenal.LIME, root)
 	var meshes: Array = root.find_children("*", "GeometryInstance3D", true, false)
 	room_meshes.append(meshes)
-	build_side_stage(center)
 
 func deck(root: Node3D, pos: Vector3, size: Vector3, _height: float) -> void:
 	var b = solid(pos, size, Color("777e70"), root)
@@ -234,30 +232,9 @@ func build_corridor(a: Vector3, b: Vector3, _index: int) -> void:
 		var p = (start + finish) / 2 + direction.cross(Vector3.UP) * side * 6.2
 		solid(p + Vector3.UP * 0.7, Vector3(0.4, 1.4, 26) if abs(direction.z) > 0 else Vector3(26, 1.4, 0.4), Color("666554"))
 
-func build_side_stage(center: Vector3) -> void:
-	var stage = Node3D.new()
-	add_child(stage)
-	side_stages.append(stage)
-	for i in 6:
-		var y = i * 1.2
-		var p = center + Vector3(-18 + i * 5, y - 0.17, 0)
-		solid(p, Vector3(5.5, 0.34, 4), Color("8a9171"), stage)
-		game.art.box(stage, p + Vector3(0, 0.2, 2), Vector3(5.5, 0.08, 0.08), Arsenal.LIME, "metal", true)
-	set_stage(stage, false)
-
-func set_stage(stage: Node3D, enabled: bool) -> void:
-	stage.visible = enabled
-	for body in stage.find_children("*", "StaticBody3D", true, false):
-		body.collision_layer = 1 if enabled else 0
-
-func show_side(index: int, enabled: bool) -> void:
-	for i in side_stages.size():
-		set_stage(side_stages[i], enabled and i == index)
-	visibility_key = ""
-
 func update_visibility() -> void:
 	var deck_index = clampi(int(floor((game.player.position.y - game.centers[game.sector].y + 0.3) / 6)), 0, 3)
-	var key = str(game.top_down) + str(game.side_view) + str(game.sector) + str(deck_index) + str(game.sandbox)
+	var key = str(game.top_down) + str(game.sector) + str(deck_index) + str(game.sandbox)
 	if key == visibility_key:
 		return
 	visibility_key = key
@@ -268,10 +245,7 @@ func update_visibility() -> void:
 			var pos: Vector3 = mesh.global_position - game.centers[i]
 			mesh.visible = true
 			if game.top_down and i == game.sector and not game.sandbox:
-				if game.side_view:
-					mesh.visible = pos.z < -3 or pos.y < 0
-				else:
-					mesh.visible = pos.y < deck_index * 6 + 3.8
+				mesh.visible = pos.y < deck_index * 6 + 3.8
 	sun.shadow_enabled = not game.reduced_fx
 	for lamp in lights:
 		lamp.shadow_enabled = not game.reduced_fx and lamp.position.distance_to(game.player.position) < 45

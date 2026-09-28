@@ -21,8 +21,6 @@ var room := 0
 var warning: MeshInstance3D
 var practice_target := false
 var target_recovery := 0.0
-var side_member := false
-var side_origin := Vector3.ZERO
 var nav_path := PackedVector3Array()
 var nav_timer := 0.0
 
@@ -58,8 +56,6 @@ func _ready() -> void:
 func _physics_process(dt: float) -> void:
 	if dead or game.state != "RUN":
 		return
-	if game.side_view and not side_member:
-		return
 	age += dt
 	cooldown -= dt
 	slowed = maxf(0, slowed - dt)
@@ -78,13 +74,7 @@ func _physics_process(dt: float) -> void:
 		queue_free()
 		return
 	var target: Vector3 = game.enemy_target(global_position)
-	if game.side_view:
-		if target.y > position.y + 0.8:
-			var step_index = clampi(int(floor((position.y - game.side_center.y + 0.2) / 1.2)) + 1, 1, 5)
-			target = game.side_center + Vector3(-18 + step_index * 5, step_index * 1.2, 0)
-			if is_on_floor() and abs(target.x - position.x) < 5.5:
-				velocity.y = 9.5
-	elif not game.sandbox:
+	if not game.sandbox:
 		nav_timer -= dt
 		var needs_route = abs(target.y - position.y) > 2.5 or position.y - game.centers[game.nearest_sector(position)].y > 2.5 or not game.clear_line(position + Vector3.UP, target + Vector3.UP)
 		if needs_route:
@@ -103,8 +93,6 @@ func _physics_process(dt: float) -> void:
 				target = nav_path[0]
 	var direction = target - global_position
 	direction.y = 0
-	if game.side_view:
-		direction.z = 0
 	direction = direction.normalized()
 	if direction.length() > 0.1:
 		visual.rotation.y = lerp_angle(visual.rotation.y, atan2(-direction.x, -direction.z), 8 * dt)
@@ -117,20 +105,13 @@ func _physics_process(dt: float) -> void:
 			continue
 		var apart = global_position - other.global_position
 		apart.y = 0
-		if game.side_view:
-			apart.z = 0
 		if apart.length_squared() < 1.5 and apart.length_squared() > 0.01:
 			movement += apart.normalized() * 2.5
 	velocity.x = movement.x + knockback.x
 	velocity.z = movement.z + knockback.z
 	velocity.y -= 24 * dt
 	knockback = knockback.move_toward(Vector3.ZERO, dt * 30)
-	if game.side_view:
-		velocity.z = 0
 	move_and_slide()
-	if game.side_view:
-		position.z = game.side_plane_z
-		position.x = clampf(position.x, game.side_center.x - 23, game.side_center.x + 23)
 	visual.position.y = sin(age * 9) * 0.06
 	warning.visible = cooldown < 0.38
 	game.art.animate_actor(visual, velocity.length(), age, clampf(1 - cooldown / 0.38, 0, 1))

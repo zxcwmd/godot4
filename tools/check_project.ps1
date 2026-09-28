@@ -3,7 +3,7 @@
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $problems = New-Object 'System.Collections.Generic.List[string]'
-Write-Host 'RIFT RUSH 0.3.0 - integrity and folder access check' -ForegroundColor Cyan
+Write-Host 'RIFT RUSH 0.3.1 - integrity and folder access check' -ForegroundColor Cyan
 Write-Host ('Project: ' + $root)
 Write-Host ''
 
@@ -86,7 +86,7 @@ if ($problems.Count -gt 0) {
     foreach ($problem in $problems) { Write-Host $problem -ForegroundColor Red }
     Write-Host ''
     Write-Host 'FAIL. Extract the COMPLETE fresh ZIP into a NEW writable folder.'
-    Write-Host 'Suggested location: %LOCALAPPDATA%\RiftRush-0.3.0'
+    Write-Host 'Suggested location: %LOCALAPPDATA%\RiftRush-0.3.1'
     Write-Host 'CHANGED may mean an intentional edit, not necessarily corruption.'
     Write-Host 'Do not disable antivirus or Safe Save. See START_HERE.txt.'
     exit 1

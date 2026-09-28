@@ -152,15 +152,11 @@ func _physics_process(dt: float) -> void:
 		var mouse = get_viewport().get_mouse_position()
 		var origin = game.top_camera.project_ray_origin(mouse)
 		var ray = game.top_camera.project_ray_normal(mouse)
-		var plane = Plane(Vector3.BACK, game.side_plane_z) if game.side_view else Plane(Vector3.UP, global_position.y + 1.2)
+		var plane = Plane(Vector3.UP, global_position.y + 1.2)
 		var target = plane.intersects_ray(origin, ray)
 		if target != null:
 			aim = (target - global_position - Vector3.UP * 1.2).normalized()
 			model.rotation.y = atan2(-aim.x, -aim.z) - rotation.y
-		if game.side_view:
-			direction = Vector3(input.x, 0, 0)
-			model.rotation.y = (-PI / 2 if aim.x >= 0 else PI / 2) - rotation.y
-			world_weapon.rotation.x += atan2(aim.y, maxf(abs(aim.x), 0.01))
 	if not pending_weapon.is_empty():
 		strike_delay -= dt
 		if strike_delay <= 0:
@@ -170,8 +166,6 @@ func _physics_process(dt: float) -> void:
 			perform_attack(id, invoked)
 	if Input.is_action_just_pressed("dash") and dash_cooldown <= 0:
 		dash_direction = direction.normalized() if direction.length() > 0 else Vector3(aim.x, 0, aim.z).normalized()
-		if game.side_view:
-			dash_direction = Vector3(signf(direction.x) if abs(direction.x) > 0.01 else signf(aim.x), 0, 0)
 		dash_time = 0.17
 		dash_cooldown = 1.1
 		invulnerable = 0.28
@@ -206,12 +200,7 @@ func _physics_process(dt: float) -> void:
 	velocity.y -= 26 * dt
 	if game.state == "DROP":
 		velocity.y = maxf(velocity.y, -45)
-	if game.side_view:
-		velocity.z = 0
 	move_and_slide()
-	if game.side_view:
-		position.z = game.side_plane_z
-		position.x = clampf(position.x, game.side_center.x - 23, game.side_center.x + 23)
 	if global_position.y < -32:
 		hurt(25)
 		global_position = game.centers[game.sector] + Vector3.UP * 3
@@ -255,16 +244,16 @@ func perform_attack(id: String, invoked: String) -> void:
 				if not is_instance_valid(enemy) or enemy.dead:
 					continue
 				var offset = enemy.global_position + Vector3.UP - origin
-				var flat = offset.normalized() if game.side_view else Vector3(offset.x, 0, offset.z).normalized()
-				var flat_aim = aim.normalized() if game.side_view else Vector3(aim.x, 0, aim.z).normalized()
+				var flat = Vector3(offset.x, 0, offset.z).normalized()
+				var flat_aim = Vector3(aim.x, 0, aim.z).normalized()
 				if offset.length() < data.reach and flat.dot(flat_aim) >= data.cone and game.clear_line(origin, enemy.global_position + Vector3.UP):
 					enemy.take_damage(data.damage * damage_mult, flat * 7)
 					if id == "sickles":
 						health = minf(max_health, health + 1.2)
 			if id == "scythe":
 				game.fx.ring(global_position + Vector3.UP, 4.4, color)
-			var forward = aim.normalized() if game.side_view else Vector3(aim.x, 0, aim.z).normalized()
-			var side = forward.cross(Vector3.FORWARD if game.side_view else Vector3.UP)
+			var forward = Vector3(aim.x, 0, aim.z).normalized()
+			var side = forward.cross(Vector3.UP)
 			for i in 7:
 				var a = -1.2 + i * 0.4
 				var b = a + 0.4

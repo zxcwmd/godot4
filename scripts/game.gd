@@ -9,7 +9,6 @@ const RiftEnemy = preload("res://scripts/enemy.gd")
 const RiftProjectile = preload("res://scripts/projectile.gd")
 const RiftLab = preload("res://scripts/lab.gd")
 const RetroArt = preload("res://scripts/retro_art.gd")
-const PerspectiveEvent = preload("res://scripts/perspective_event.gd")
 
 var state := "MENU"
 var suspended_state := "RUN"
@@ -27,12 +26,7 @@ var centers: Array[Vector3] = [Vector3(0, 0, 0), Vector3(0, 0, -76), Vector3(76,
 var sector := 0
 var visited: Array[int] = [0]
 var top_down := false
-var side_view := false
-var side_center := Vector3.ZERO
-var side_plane_z := 0.0
-var side_return := Vector3.ZERO
 var art = RetroArt.new()
-var challenge = PerspectiveEvent.new()
 var retro_overlay: ColorRect
 var elapsed := 0.0
 var real_time := 0.0
@@ -63,7 +57,6 @@ var lab: RiftLab
 
 func _ready() -> void:
 	randomize()
-	challenge.game = self
 	setup_input()
 	load_record()
 	fx = RiftFX.new()
@@ -132,8 +125,6 @@ func _unhandled_input(event: InputEvent) -> void:
 					hud.build_menu()
 				elif state == "UPGRADE":
 					resume_run()
-			KEY_C:
-				challenge.respond()
 			KEY_B:
 				if sandbox and state == "RUN":
 					open_lab()
@@ -189,22 +180,16 @@ func _process(dt: float) -> void:
 			var next_sector = nearest_sector(player.global_position)
 			if next_sector != sector:
 				var offset: Vector3 = player.global_position - centers[next_sector]
-				if not side_view and abs(offset.x) < 24.5 and abs(offset.z) < 24.5:
+				if abs(offset.x) < 24.5 and abs(offset.z) < 24.5:
 					enter_sector(next_sector)
 			spawn_timer -= dt
 			if spawn_timer <= 0:
 				spawn_wave()
 				spawn_timer = maxf(0.65, 2.8 - elapsed / 150)
-		challenge.tick(dt)
 		update_pickups(dt)
 	if top_down and state != "MENU":
-		if side_view:
-			var target = Vector3(player.position.x, maxf(side_center.y + 5, player.position.y + 3.5), side_plane_z + 48)
-			top_camera.position = top_camera.position.lerp(target, minf(1, dt * 10))
-			top_camera.rotation = Vector3.ZERO
-		else:
-			top_camera.position = top_camera.position.lerp(player.global_position + Vector3(0, 45, 0.01), minf(1, dt * 12))
-			top_camera.rotation_degrees = Vector3(-90, 0, 0)
+		top_camera.position = top_camera.position.lerp(player.global_position + Vector3(0, 45, 0.01), minf(1, dt * 12))
+		top_camera.rotation_degrees = Vector3(-90, 0, 0)
 	world.update_visibility()
 	if state in ["RUN", "DROP"]:
 		var s = 0.0 if reduced_fx else shake
@@ -214,11 +199,6 @@ func _process(dt: float) -> void:
 	hud.queue_redraw()
 
 func start_run() -> void:
-	if side_view:
-		set_side_view(false)
-	challenge.reset()
-	challenge.successes = 0
-	challenge.misses = 0
 	sandbox = false
 	lab.visible = false
 	fx.clear_all()
@@ -306,9 +286,6 @@ func resume_run() -> void:
 	hud.build_menu()
 
 func return_to_hub() -> void:
-	if side_view:
-		set_side_view(false)
-	challenge.reset()
 	player.cancel_attack()
 	sandbox = false
 	lab.visible = false
@@ -334,9 +311,6 @@ func enter_sector(index: int) -> void:
 	spawn_wave()
 
 func set_perspective(flat: bool) -> void:
-	if side_view:
-		set_side_view(false)
-	challenge.reset()
 	player.look_guard = 0.12
 	top_down = flat
 	transition = 0.65
@@ -356,51 +330,6 @@ func set_perspective(flat: bool) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if state == "RUN" else Input.MOUSE_MODE_VISIBLE
 	player.model.visible = top_down
 	player.weapon_model.visible = not top_down
-
-func set_side_view(enabled: bool) -> void:
-	if side_view == enabled:
-		return
-	if enabled and not top_down:
-		return
-	side_view = enabled
-	for p in projectiles.get_children():
-		p.queue_free()
-	player.cancel_attack()
-	player.velocity = Vector3.ZERO
-	if enabled:
-		side_return = player.position
-		side_center = lab.ZONES[1] if sandbox else centers[sector]
-		side_plane_z = side_center.z
-		player.position = Vector3(clampf(player.position.x, side_center.x - 21, side_center.x + 21), side_center.y + 0.2, side_plane_z)
-		top_camera.size = 29
-		top_camera.position = Vector3(player.position.x, side_center.y + 5, side_plane_z + 48)
-		top_camera.rotation = Vector3.ZERO
-		var n := 0
-		for e in enemies:
-			if not is_instance_valid(e) or e.dead or e.practice_target:
-				continue
-			e.side_origin = e.position
-			e.side_member = true
-			e.position = side_center + Vector3(-20 + fposmod(n * 7.3, 40), 0.2, 0)
-			e.velocity = Vector3.ZERO
-			e.nav_path.clear()
-			n += 1
-	else:
-		player.position = side_return
-		for e in enemies:
-			if is_instance_valid(e) and e.side_member:
-				e.position = e.side_origin
-				e.velocity = Vector3.ZERO
-				e.side_member = false
-				e.nav_path.clear()
-		top_camera.size = 44 if not sandbox else 36
-		top_camera.position = player.position + Vector3(0, 45, 0.01)
-		top_camera.rotation_degrees = Vector3(-90, 0, 0)
-	world.show_side(centers.size() if sandbox else sector, enabled)
-	if sandbox:
-		lab.show_side(enabled)
-	player.invulnerable = 0.5
-	notify("СБОКУ / A-D + SPACE / ПРИЦЕЛ МЫШЬЮ" if enabled else "СВЕРХУ / WASD / ГЛУБИНА ВОССТАНОВЛЕНА", Arsenal.CYAN)
 
 func start_sandbox() -> void:
 	start_run()
@@ -460,16 +389,12 @@ func spawn_wave() -> void:
 		if pos.distance_to(player.position) < 6:
 			continue
 		var floor_index = clampi(roundi((player.position.y - center.y) / 6), 0, 3)
-		if floor_index > 0 and not side_view:
+		if floor_index > 0:
 			pos = center + Vector3(randf_range(-20, 20), floor_index * 6 + 0.1, 20 if randf() < 0.5 else -20)
 		var enemy = RiftEnemy.new()
 		enemy.game = self
 		enemy.kind = 2 if elapsed > 35 and randf() < 0.18 else (1 if randf() < 0.3 else 0)
 		enemy.position = pos
-		if side_view:
-			enemy.side_origin = pos
-			enemy.side_member = true
-			enemy.position = side_center + Vector3(-20 if randf() < 0.5 else 20, 0.2, 0)
 		enemies.append(enemy)
 		add_child(enemy)
 

@@ -1,0 +1,9 @@
+# Кэш/временные файлы Godot
+.godot/
+*.tmp
+export.cfg
+export_presets.cfg
+
+# Логи и пользовательские данные лаунчера (создаются в user://)
+logs/
+*.log

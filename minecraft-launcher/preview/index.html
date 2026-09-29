@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aurora Launcher — превью дизайна</title>
+<style>
+  :root{
+    --accent-a:#22d4ee;
+    --accent-b:#a855f7;
+    --bg:#070b16;
+    --text:#eef2ff;
+    --muted:#96a3c4;
+    --dim:#66718f;
+    --panel:rgba(18,26,46,.72);
+    --panel-2:rgba(24,34,58,.6);
+    --stroke:rgba(255,255,255,.09);
+    --ok:#4ade80;
+    --warn:#fbbf24;
+    --err:#f87171;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:"Segoe UI",Inter,"SF Pro Display",Roboto,system-ui,sans-serif;
+    overflow:hidden;
+    font-size:14px;
+  }
+  /* ---------- аврора ---------- */
+  #aurora{position:fixed;inset:0;z-index:0;overflow:hidden}
+  #aurora .blob{position:absolute;width:60vmax;height:60vmax;border-radius:50%;filter:blur(90px);opacity:.42;mix-blend-mode:screen}
+  #aurora .b1{background:radial-gradient(circle at 30% 30%,var(--accent-a),transparent 62%);top:-22vmax;left:-14vmax;animation:drift1 26s ease-in-out infinite alternate}
+  #aurora .b2{background:radial-gradient(circle at 70% 40%,var(--accent-b),transparent 62%);bottom:-26vmax;right:-16vmax;animation:drift2 32s ease-in-out infinite alternate}
+  #aurora .b3{background:radial-gradient(circle at 50% 50%,#3b82f6,transparent 60%);top:20%;left:35%;animation:drift3 38s ease-in-out infinite alternate;opacity:.28}
+  #aurora .grain{position:absolute;inset:0;opacity:.05;
+    background-image:radial-gradient(rgba(255,255,255,.6) 1px,transparent 1px);background-size:3px 3px}
+  #aurora .vignette{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 0%,transparent 40%,rgba(3,6,14,.86) 100%)}
+  @keyframes drift1{0%{transform:translate3d(0,0,0) scale(1)}100%{transform:translate3d(8vmax,6vmax,0) scale(1.15)}}
+  @keyframes drift2{0%{transform:translate3d(0,0,0) scale(1.1)}100%{transform:translate3d(-9vmax,-5vmax,0) scale(.95)}}
+  @keyframes drift3{0%{transform:translate3d(-4vmax,0,0) scale(1)}100%{transform:translate3d(6vmax,-7vmax,0) scale(1.2)}}
+
+  /* ---------- каркас ---------- */
+  #app{position:relative;z-index:1;display:flex;height:100vh}
+  aside{
+    width:268px;flex:none;display:flex;flex-direction:column;gap:6px;
+    padding:20px 14px 16px;background:linear-gradient(180deg,rgba(14,20,38,.85),rgba(10,15,30,.6));
+    border-right:1px solid var(--stroke);backdrop-filter:blur(18px)
+  }
+  .logo{display:flex;align-items:center;gap:12px;padding:4px 8px 18px}
+  .logo .mark{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+    background:linear-gradient(140deg,var(--accent-a),var(--accent-b));box-shadow:0 10px 26px -8px var(--accent-b)}
+  .logo h1{font-size:17px;letter-spacing:.2px}
+  .logo p{font-size:11px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase}
+  .nav-label{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);padding:14px 10px 6px}
+  .nav{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;color:var(--muted);
+    cursor:pointer;border:1px solid transparent;transition:.18s}
+  .nav:hover{color:var(--text);background:rgba(255,255,255,.05)}
+  .nav.active{color:#fff;background:linear-gradient(90deg,rgba(255,255,255,.11),rgba(255,255,255,.03));
+    border-color:var(--stroke);box-shadow:0 12px 28px -18px var(--accent-a)}
+  .nav.active svg{color:var(--accent-a)}
+  .nav .badge{margin-left:auto;font-size:11px;padding:2px 8px;border-radius:999px;background:rgba(74,222,128,.16);color:var(--ok)}
+  .side-foot{margin-top:auto;padding:12px 10px 4px;border-top:1px solid var(--stroke);font-size:12px;color:var(--dim)}
+  .side-foot b{display:block;color:var(--muted);font-weight:600;margin-bottom:2px}
+
+  main{flex:1;display:flex;flex-direction:column;min-width:0}
+  header{display:flex;align-items:center;gap:16px;padding:16px 26px;border-bottom:1px solid var(--stroke);
+    background:linear-gradient(180deg,rgba(12,18,34,.7),rgba(12,18,34,.25));backdrop-filter:blur(14px)}
+  header h2{font-size:19px;font-weight:650}
+  header p{font-size:12px;color:var(--dim);margin-top:2px}
+  .grow{flex:1}
+  .pill{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;font-size:12.5px;
+    border:1px solid var(--stroke);background:rgba(255,255,255,.05);color:var(--muted)}
+  .pill b{color:var(--text);font-weight:600}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
+  .btn{border:none;cursor:pointer;font:inherit;font-weight:600;color:#08101f;padding:10px 18px;border-radius:12px;
+    background:linear-gradient(135deg,var(--accent-a),var(--accent-b));box-shadow:0 14px 30px -14px var(--accent-b);transition:.18s}
+  .btn:hover{transform:translateY(-1px);filter:brightness(1.07)}
+  .btn.ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--stroke);box-shadow:none}
+  .btn.ghost:hover{background:rgba(255,255,255,.11)}
+  .avatar{width:38px;height:38px;border-radius:12px;background:linear-gradient(140deg,#f472b6,#a855f7);display:grid;place-items:center;font-weight:700;color:#1b0b2a}
+
+  .scroll{flex:1;overflow-y:auto;padding:22px 26px 30px;scrollbar-width:thin}
+  .scroll::-webkit-scrollbar{width:9px}
+  .scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:9px}
+  .page{display:none;animation:fade .35s ease}
+  .page.show{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  .glass{background:linear-gradient(150deg,var(--panel),var(--panel-2));border:1px solid var(--stroke);
+    border-radius:20px;backdrop-filter:blur(16px);box-shadow:0 26px 60px -34px rgba(0,0,0,.9)}
+  .hero{padding:26px 28px;display:flex;gap:26px;align-items:center;position:relative;overflow:hidden}
+  .hero::after{content:"";position:absolute;right:-90px;top:-90px;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle,var(--accent-a),transparent 62%);opacity:.22;filter:blur(10px)}
+  .hero .eyebrow{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent-a);font-weight:700}
+  .hero h3{font-size:30px;font-weight:700;margin:8px 0 6px}
+  .hero p{color:var(--muted);max-width:52ch;line-height:1.55}
+  .hero .actions{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap}
+  .cover{margin-left:auto;width:132px;height:132px;border-radius:18px;flex:none;
+    background:linear-gradient(150deg,#1e293b,#0b1222);border:1px solid var(--stroke);
+    display:grid;place-items:center;box-shadow:inset 0 0 40px -18px var(--accent-a)}
+
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0 6px}
+  .tile{padding:16px 18px}
+  .tile .cap{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+  .tile .val{font-size:24px;font-weight:700;margin:6px 0 2px}
+  .tile .hint{font-size:12px;color:var(--muted)}
+
+  .section{display:flex;align-items:center;gap:12px;margin:26px 0 14px}
+  .section h4{font-size:15px;font-weight:650}
+  .section span{font-size:12px;color:var(--dim)}
+  .rule{flex:1;height:1px;background:linear-gradient(90deg,var(--stroke),transparent)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:14px}
+  .card{padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+  .card .row{display:flex;align-items:center;gap:10px}
+  .card .ico{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:none;
+    background:rgba(255,255,255,.07);border:1px solid var(--stroke);color:var(--accent-a)}
+  .card h5{font-size:14px;font-weight:650}
+  .card .meta{font-size:12px;color:var(--dim)}
+  .bar{height:6px;border-radius:99px;background:rgba(255,255,255,.09);overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent-a),var(--accent-b));transition:width .6s}
+  .tag{font-size:11px;padding:3px 9px;border-radius:999px;border:1px solid var(--stroke);color:var(--muted)}
+  .tag.on{background:rgba(74,222,128,.14);color:var(--ok);border-color:rgba(74,222,128,.3)}
+  .tag.off{background:rgba(148,163,184,.14);color:#cbd5e1}
+  .tag.err{background:rgba(248,113,113,.16);color:var(--err);border-color:rgba(248,113,113,.35)}
+
+  .console{padding:14px 16px;font-family:"Cascadia Code",Consolas,ui-monospace,monospace;font-size:12.5px}
+  .console .lines{height:196px;overflow:hidden;display:flex;flex-direction:column;gap:5px;justify-content:flex-end}
+  .console .ln{display:flex;gap:10px;color:#cbd5e1}
+  .console .ln time{color:var(--dim);flex:none}
+  .console .ln .lv{flex:none;width:52px;font-weight:700}
+  .console .ln.info .lv{color:var(--accent-a)}
+  .console .ln.ok .lv{color:var(--ok)}
+  .console .ln.warn .lv{color:var(--warn)}
+  .console .ln.err .lv{color:var(--err)}
+  .console .ln span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  .rowlist{display:flex;flex-direction:column;gap:10px}
+  .rowline{display:flex;align-items:center;gap:14px;padding:14px 18px}
+  .rowline .txt{flex:1;min-width:0}
+  .rowline .txt b{display:block;font-weight:600}
+  .rowline .txt small{color:var(--dim)}
+  .switch{width:44px;height:24px;border-radius:99px;background:rgba(255,255,255,.13);position:relative;flex:none;cursor:pointer;transition:.2s}
+  .switch::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#e2e8f7;transition:.2s}
+  .switch.on{background:linear-gradient(90deg,var(--accent-a),var(--accent-b))}
+  .switch.on::after{left:23px}
+
+  .accents{display:flex;gap:10px}
+  .swatch{width:26px;height:26px;border-radius:9px;cursor:pointer;border:2px solid transparent;transition:.18s}
+  .swatch.sel{border-color:#fff;transform:scale(1.08)}
+
+  .banner{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:14px;
+    background:rgba(251,191,36,.09);border:1px solid rgba(251,191,36,.28);color:#fde68a;font-size:12.5px;line-height:1.5}
+  .toasts{position:fixed;right:22px;bottom:22px;z-index:5;display:flex;flex-direction:column;gap:10px}
+  .toast{display:flex;gap:10px;align-items:center;padding:12px 16px;border-radius:14px;font-size:13px;
+    background:linear-gradient(150deg,rgba(22,32,54,.95),rgba(16,24,44,.9));border:1px solid var(--stroke);
+    box-shadow:0 20px 40px -20px #000;animation:pop .3s ease}
+  .toast b{font-weight:650}
+  .toast small{display:block;color:var(--muted)}
+  @keyframes pop{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  .kbd{font-size:11px;color:var(--dim);border:1px solid var(--stroke);border-radius:7px;padding:2px 7px}
+  @media (max-width:1180px){.tiles{grid-template-columns:repeat(2,1fr)}aside{width:230px}}
+</style>
+</head>
+<body>
+<div id="aurora">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="grain"></div><div class="vignette"></div>
+</div>
+
+<div id="app">
+  <aside>
+    <div class="logo">
+      <div class="mark">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#08111f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="M3 7l9 5 9-5"/><path d="M12 12v10"/>
+        </svg>
+      </div>
+      <div><h1>Aurora</h1><p>launcher</p></div>
+    </div>
+    <div class="nav-label">Меню</div>
+    <div class="nav active" data-page="home">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.6V21h14V9.6"/><path d="M9.5 21v-6h5v6"/></svg>
+      Главная</div>
+    <div class="nav" data-page="instances">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>
+      Экземпляры</div>
+    <div class="nav" data-page="automation">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v3"/><path d="M12 18v3"/><circle cx="12" cy="12" r="4.2"/><path d="M4.2 8.5h3.2M16.6 15.5h3.2M4.2 15.5h3.2M16.6 8.5h3.2"/></svg>
+      Автоматизация <span class="badge">3</span></div>
+    <div class="nav" data-page="mods">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h10"/></svg>
+      Моды</div>
+    <div class="nav" data-page="settings">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.05A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.05A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6h.08A1.7 1.7 0 0 0 10 3.05V3a2 2 0 1 1 4 0v.05A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9v.08a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.05a1.7 1.7 0 0 0-1.55 1z"/></svg>
+      Настройки</div>
+
+    <div class="nav-label">Аккаунт</div>
+    <div class="rowline glass" style="padding:12px 14px;gap:12px">
+      <div class="cover" style="width:40px;height:40px;border-radius:12px;margin:0">S</div>
+      <div class="txt" style="flex:1"><b style="font-size:13px">SteveAurora</b><small>offline · Vanilla</small></div>
+    </div>
+    <div class="side-foot"><b>Данные</b><span class="kbd">user://aurora</span></div>
+  </aside>
+
+  <main>
+    <header>
+      <div>
+        <h2 id="page-title">Главная</h2>
+        <p id="page-sub">Краткая сводка по сборкам и автоматизации</p>
+      </div>
+      <div class="grow"></div>
+      <div class="pill"><span class="dot"></span>Java <b>21</b> · Temurin</div>
+      <div class="pill">Боты <b>3</b> активны</div>
+      <button class="btn ghost">Обновить</button>
+      <div class="avatar">S</div>
+    </header>
+
+    <div class="scroll">
+      <!-- ================= HOME ================= -->
+      <section class="page show" id="page-home">
+        <div class="hero glass">
+          <div>
+            <div class="eyebrow">Текущая сборка</div>
+            <h3>Aurora Survival 1.21.4</h3>
+            <p>Fabric · 42 мода · последний запуск сегодня. Боты автошахты и автоварки зелий работают в фоне.</p>
+            <div class="actions">
+              <button class="btn">▶ Играть</button>
+              <button class="btn ghost">Открыть папку</button>
+              <button class="btn ghost">Резервная копия</button>
+            </div>
+          </div>
+          <div class="cover">
+            <svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="var(--accent-a)" stroke-width="1.4" stroke-linecap="round"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="M3 7l9 5 9-5"/><path d="M12 12v10"/></svg>
+          </div>
+        </div>
+
+        <div class="tiles">
+          <div class="tile glass"><div class="cap">Экземпляры</div><div class="val">4</div><div class="hint">2 с бэкапами</div></div>
+          <div class="tile glass"><div class="cap">Активные боты</div><div class="val">3</div><div class="hint">из 6 задач</div></div>
+          <div class="tile glass"><div class="cap">Моды</div><div class="val">42</div><div class="hint">3 обновления</div></div>
+          <div class="tile glass"><div class="cap">Память</div><div class="val">8 ГБ</div><div class="hint">рекомендовано 16</div></div>
+        </div>
+
+        <div class="section"><h4>Активные задачи</h4><span>обновляется в реальном времени</span><div class="rule"></div><span class="kbd">Фильтр: все</span></div>
+        <div class="grid" id="home-tasks"></div>
+
+        <div class="section"><h4>Журнал</h4><span>боты · лаунчер · игра</span><div class="rule"></div></div>
+        <div class="console glass">
+          <div class="lines" id="home-log"></div>
+        </div>
+      </section>
+
+      <!-- ================= INSTANCES ================= -->
+      <section class="page" id="page-instances">
+        <div class="section"><h4>Сборки</h4><span>4 экземпляра</span><div class="rule"></div><button class="btn">+ Новый</button></div>
+        <div class="grid">
+          <div class="card glass">
+            <div class="row"><div class="ico">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2 3 7v10l9 5 9-5V7z"/></svg></div>
+              <div><h5>Aurora Survival</h5><div class="meta">1.21.4 · Fabric</div></div></div>
+            <div class="row" style="gap:8px"><span class="tag on">Fabric</span><span class="tag">42 мода</span><span class="tag on">Java 21</span></div>
+            <div class="meta">Последний запуск: сегодня, 14:22</div>
+            <div class="row" style="gap:8px;margin-top:2px"><button class="btn" style="padding:8px 14px">Играть</button><button class="btn ghost" style="padding:8px 14px">Папка</button></div>
+          </div>
+          <div class="card glass">
+            <div class="row"><div class="ico">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+              <div><h5>Vanilla Test</h5><div class="meta">1.20.1 · Vanilla</div></div></div>
+            <div class="row" style="gap:8px"><span class="tag off">Vanilla</span><span class="tag">0 модов</span><span class="tag on">Java 17</span></div>
+            <div class="meta">Последний запуск: 3 дня назад</div>
+            <div class="row" style="gap:8px;margin-top:2px"><button class="btn" style="padding:8px 14px">Играть</button><button class="btn ghost" style="padding:8px 14px">Папка</button></div>
+          </div>
+          <div class="card glass">
+            <div class="row"><div class="ico">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg></div>
+              <div><h5>Modpack: Ad Astra</h5><div class="meta">1.19.2 · Forge</div></div></div>
+            <div class="row" style="gap:8px"><span class="tag off">Forge</span><span class="tag">118 модов</span><span class="tag on">Java 17</span></div>
+            <div class="meta">Установка завершена</div>
+            <div class="row" style="gap:8px;margin-top:2px"><button class="btn" style="padding:8px 14px">Играть</button><button class="btn ghost" style="padding:8px 14px">Папка</button></div>
+          </div>
+          <div class="card glass">
+            <div class="row"><div class="ico">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v18M3 12h18"/></svg></div>
+              <div><h5>Snapshot Lab</h5><div class="meta">25w03a · Vanilla</div></div></div>
+            <div class="row" style="gap:8px"><span class="tag off">Снапшот</span><span class="tag">0 модов</span><span class="tag on">Java 21</span></div>
+            <div class="meta">Не запускалась</div>
+            <div class="row" style="gap:8px;margin-top:2px"><button class="btn" style="padding:8px 14px">Играть</button><button class="btn ghost" style="padding:8px 14px">Папка</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= AUTOMATION ================= -->
+      <section class="page" id="page-automation">
+        <div class="banner" style="margin-bottom:18px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="flex:none"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+          <div>Боты работают через Mineflayer и управляют игрой как клиент. Используйте автоматизацию только в одиночной игре, на своих серверах или там, где это разрешено правилами. За нарушение правил сервера ответственность несёт пользователь.</div>
+        </div>
+
+        <div class="section"><h4>Задачи автоматизации</h4><span>6 задач · 3 активны</span><div class="rule"></div><button class="btn">+ Новая задача</button></div>
+        <div class="grid" id="auto-tasks"></div>
+
+        <div class="section"><h4>Журнал задачи</h4><span>фильтры: все / боты / лаунчер / ошибки</span><div class="rule"></div></div>
+        <div class="console glass">
+          <div class="lines" id="auto-log"></div>
+        </div>
+      </section>
+
+      <!-- ================= MODS ================= -->
+      <section class="page" id="page-mods">
+        <div class="card glass" style="margin-bottom:18px">
+          <div class="row" style="gap:12px;flex-wrap:wrap">
+            <div class="pill" style="flex:1;min-width:220px;justify-content:flex-start">Поиск по Modrinth…</div>
+            <div class="pill">Версия <b>1.21.4</b></div>
+            <div class="pill">Загрузчик <b>Fabric</b></div>
+            <button class="btn" style="margin-left:auto">Найти</button>
+          </div>
+        </div>
+        <div class="section"><h4>Установленные моды</h4><span>42 · 3 обновления</span><div class="rule"></div><button class="btn ghost">Обновить все</button></div>
+        <div class="rowlist">
+          <div class="rowline glass"><div class="ico" style="width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.07);display:grid;place-items:center;color:var(--accent-a)">S</div>
+            <div class="txt"><b>Sodium</b><small>0.6.5 · mc1.21.4 · Fabric · 2.1 МБ</small></div><span class="tag on">активен</span><button class="btn ghost" style="padding:7px 12px">Обновить</button></div>
+          <div class="rowline glass"><div class="ico" style="width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.07);display:grid;place-items:center;color:var(--accent-a)">L</div>
+            <div class="txt"><b>Lithium</b><small>0.14.4 · mc1.21.4 · Fabric · 640 КБ</small></div><span class="tag on">активен</span><button class="btn ghost" style="padding:7px 12px">Обновить</button></div>
+          <div class="rowline glass"><div class="ico" style="width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.07);display:grid;place-items:center;color:var(--accent-a)">M</div>
+            <div class="txt"><b>Mod Menu</b><small>13.0.0 · mc1.21.4 · Fabric · 1.1 МБ</small></div><span class="tag off">устарел</span><button class="btn ghost" style="padding:7px 12px">Обновить</button></div>
+          <div class="rowline glass"><div class="ico" style="width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.07);display:grid;place-items:center;color:var(--accent-a)">J</div>
+            <div class="txt"><b>JourneyMap</b><small>1.20-6.0 · mc1.21.4 · Fabric · 4.4 МБ</small></div><span class="tag on">активен</span><button class="btn ghost" style="padding:7px 12px">Обновить</button></div>
+        </div>
+      </section>
+
+      <!-- ================= SETTINGS ================= -->
+      <section class="page" id="page-settings">
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(330px,1fr))">
+          <div class="card glass">
+            <h5>Аккаунт</h5>
+            <div class="rowline glass" style="padding:12px 14px;border-radius:14px">
+              <div class="cover" style="width:40px;height:40px;border-radius:12px;margin:0">S</div>
+              <div class="txt"><b>SteveAurora</b><small>оффлайн-режим</small></div>
+            </div>
+            <button class="btn ghost" style="align-self:flex-start">Войти через Microsoft</button>
+          </div>
+          <div class="card glass">
+            <h5>Java и память</h5>
+            <div class="rowline glass" style="padding:12px 14px;border-radius:14px"><div class="txt"><b>Eclipse Temurin 21</b><small>/usr/lib/jvm/temurin-21</small></div><span class="tag on">выбрано</span></div>
+            <div class="bar"><i style="width:50%"></i></div>
+            <div class="meta">Оперативная память: 8 ГБ из 16 ГБ (рекомендуется 8)</div>
+          </div>
+          <div class="card glass">
+            <h5>Оформление</h5>
+            <div class="meta">Акцент</div>
+            <div class="accents">
+              <div class="swatch sel" data-a="#22d4ee" data-b="#a855f7" style="background:linear-gradient(135deg,#22d4ee,#a855f7)"></div>
+              <div class="swatch" data-a="#38bdf8" data-b="#6366f1" style="background:linear-gradient(135deg,#38bdf8,#6366f1)"></div>
+              <div class="swatch" data-a="#34d399" data-b="#0ea5e9" style="background:linear-gradient(135deg,#34d399,#0ea5e9)"></div>
+              <div class="swatch" data-a="#fb7185" data-b="#f59e0b" style="background:linear-gradient(135deg,#fb7185,#f59e0b)"></div>
+            </div>
+            <div class="rowline" style="padding:6px 0"><div class="txt"><b>Яркость фона</b><small>0.85</small></div><div class="bar" style="width:120px"><i style="width:70%"></i></div></div>
+            <div class="rowline" style="padding:6px 0"><div class="txt"><b>Меньше анимаций</b></div><div class="switch"></div></div>
+          </div>
+          <div class="card glass">
+            <h5>Автоматизация</h5>
+            <div class="rowline" style="padding:6px 0"><div class="txt"><b>Хост ботов</b><small>127.0.0.1:3001</small></div><span class="tag on">подключено</span></div>
+            <div class="rowline" style="padding:6px 0"><div class="txt"><b>Ник бота</b><small>AuroraBot</small></div></div>
+            <div class="rowline" style="padding:6px 0"><div class="txt"><b>Одновременно задач</b><small>2</small></div><div class="bar" style="width:120px"><i style="width:50%"></i></div></div>
+          </div>
+          <div class="card glass" style="grid-column:1/-1">
+            <h5>Умное поведение</h5>
+            <div class="rowline"><div class="txt"><b>Резервные копии</b><small>архив сохранений перед запуском</small></div><div class="switch on"></div></div>
+            <div class="rowline"><div class="txt"><b>Обновление модов</b><small>проверять при запуске</small></div><div class="switch on"></div></div>
+            <div class="rowline"><div class="txt"><b>Установка Java</b><small>качать нужную версию автоматически</small></div><div class="switch on"></div></div>
+          </div>
+        </div>
+        <div class="banner" style="margin-top:18px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="flex:none"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+          <div>Aurora Launcher — неофициальный инструмент и не связан с Mojang Studios. Используйте его только в рамках лицензионного соглашения Minecraft и правил серверов.</div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+const TITLES = {
+  home:["Главная","Краткая сводка по сборкам и автоматизации"],
+  instances:["Экземпляры","Сборки, версии и загрузчики модов"],
+  automation:["Автоматизация","Боты для шахты, зелий, ферм и макросов"],
+  mods:["Моды","Каталог Modrinth и управление установленными"],
+  settings:["Настройки","Аккаунт, Java, память, оформление и боты"]
+};
+document.querySelectorAll('.nav').forEach(n => n.addEventListener('click', () => {
+  document.querySelectorAll('.nav').forEach(x => x.classList.remove('active'));
+  n.classList.add('active');
+  const p = n.dataset.page;
+  document.querySelectorAll('.page').forEach(s => s.classList.remove('show'));
+  document.getElementById('page-' + p).classList.add('show');
+  document.getElementById('page-title').textContent = TITLES[p][0];
+  document.getElementById('page-sub').textContent = TITLES[p][1];
+}));
+
+/* --- переключение акцентов --- */
+document.querySelectorAll('.swatch').forEach(s => s.addEventListener('click', () => {
+  document.querySelectorAll('.swatch').forEach(x => x.classList.remove('sel'));
+  s.classList.add('sel');
+  document.documentElement.style.setProperty('--accent-a', s.dataset.a);
+  document.documentElement.style.setProperty('--accent-b', s.dataset.b);
+}));
+document.querySelectorAll('.switch').forEach(s => s.addEventListener('click', () => s.classList.toggle('on')));
+
+/* --- задачи ботов --- */
+const BOTS = [
+  {name:"Автошахта", kind:"mine", icon:"⛏", tag:"работает", cls:"on", note:"шахта · y=-54", val:62, meta:"1 240 блоков · 42 мин"},
+  {name:"Автоварка зелий", kind:"brew", icon:"⚗", tag:"работает", cls:"on", note:"3 варки", val:35, meta:"стенд · зелье силы"},
+  {name:"Анти-AFK", kind:"afk", icon:"◍", tag:"работает", cls:"on", note:"сервер SMP", val:8, meta:"простой · 1 ч 12 мин"},
+  {name:"Автоферма", kind:"farm", icon:"✿", tag:"остановлен", cls:"off", note:"пшеница", val:0, meta:"3 урожая собрано"},
+  {name:"Авторыбалка", kind:"fish", icon:"≈", tag:"остановлен", cls:"off", note:"рубальная", val:0, meta:"17 рыб"},
+  {name:"Автоплавильня", kind:"smelt", icon:"▤", tag:"ошибка", cls:"err", note:"нужен уголь", val:0, meta:"нет топлива"}
+];
+function botCard(b){
+  return `<div class="card glass">
+    <div class="row"><div class="ico">${b.icon}</div>
+      <div style="flex:1"><h5>${b.name}</h5><div class="meta">${b.kind} · ${b.note}</div></div>
+      <span class="tag ${b.cls}">${b.tag}</span></div>
+    <div class="bar"><i style="width:${b.val}%"></i></div>
+    <div class="meta">${b.meta}</div>
+    <div class="row" style="gap:8px"><button class="btn ghost" style="padding:7px 12px">Журнал</button><button class="btn ghost" style="padding:7px 12px">Стоп</button></div>
+  </div>`;
+}
+const homeTasks = document.getElementById('home-tasks');
+const autoTasks = document.getElementById('auto-tasks');
+autoTasks.innerHTML = BOTS.map(botCard).join('');
+homeTasks.innerHTML = BOTS.slice(0,3).map(botCard).join('');
+
+/* --- живой журнал --- */
+const LOGS = [
+  ["info","лаунчер","Java 21 найдена, подготовка запуска"],
+  ["ok","бот","автошахта: добыто 1 240 блоков, инвентарь сдан"],
+  ["info","игра","Сборка Aurora Survival 1.21.4 запущена"],
+  ["warn","бот","автоплавильня: закончилось топливо, задача остановлена"],
+  ["ok","бот","автоварка зелий: варка завершена, 3 зелья силы"],
+  ["info","моды","Modrinth: проверено 42 мода, 3 обновления"],
+  ["err","бот","авторыбалка: соединение закрыто сервером"],
+  ["info","бот","анти-AFK: прыжок, сердцебиение ок"],
+  ["ok","лаунчер","Резервная копия сохранений создана"],
+  ["info","бот","автоферма: собрано 2 урожая пшеницы"]
+];
+function line(i){
+  const [lv, src, txt] = LOGS[i % LOGS.length];
+  const d = new Date(Date.now() - (LOGS.length - i) * 7000);
+  const t = d.toTimeString().slice(0,8);
+  const LV = {info:"ИНФО", ok:"ОК", warn:"ПРЕДУП", err:"ОШИБКА"};
+  return `<div class="ln ${lv}"><time>${t}</time><span class="lv">${LV[lv]}</span><span>${txt}</span></div>`;
+}
+let idx = 0;
+function tick(){
+  const h = document.getElementById('home-log'), a = document.getElementById('auto-log');
+  h.insertAdjacentHTML('beforeend', line(idx));
+  if (idx % 2 === 0) a.insertAdjacentHTML('beforeend', line(idx + 1));
+  while (h.children.length > 9) h.firstChild.remove();
+  while (a.children.length > 9) a.firstChild.remove();
+  idx++;
+  // плавное движение прогресс-баров
+  document.querySelectorAll('#home-tasks .bar i, #auto-tasks .bar i').forEach(b => {
+    let w = parseFloat(b.style.width) || 0;
+    w = (w + 1.5) % 100;
+    b.style.width = w + '%';
+  });
+}
+setInterval(tick, 1600);
+
+/* --- тост --- */
+function toast(title, body){
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<div class="dot" style="margin-right:2px"></div><div><b>${title}</b><small>${body}</small></div>`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => { el.style.opacity = 0; el.style.transition = '.3s'; setTimeout(() => el.remove(), 320); }, 3600);
+}
+setTimeout(() => toast('Бот запущен', 'автошахта · шахта · y=-54'), 1200);
+setTimeout(() => toast('Моды обновлены', 'Modrinth: 3 мода обновлены'), 9000);
+</script>
+</body>
+</html>

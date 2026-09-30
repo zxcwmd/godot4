@@ -164,9 +164,10 @@ class BotSession {
       host: this.profile.host,
       port: Number(this.profile.port) || 25565,
       username: account?.name ?? this.profile.name,
-      version: this.profile.version || undefined,
+      version: !this.profile.version || this.profile.version === 'auto' ? undefined : this.profile.version,
       auth: account?.type === 'microsoft' ? 'microsoft' : 'offline',
-      hideErrors: false,
+      // Ошибки обрабатываем сами и показываем в телеметрии бота, а не в stderr лаунчера
+      hideErrors: true,
       checkTimeoutInterval: 60000,
       chat: 'enabled',
     };
@@ -203,8 +204,13 @@ class BotSession {
       bot.on('kicked', (reason: unknown) => {
         this.activity(`Кикнут: ${typeof reason === 'string' ? reason : JSON.stringify(reason).slice(0, 300)}`, 'bad');
       });
-      bot.on('error', (err: Error) => {
-        this.activity(`Ошибка соединения: ${err.message}`, 'bad');
+      bot.on('error', (err: Error & { code?: string }) => {
+        const hint =
+          err.code === 'ECONNREFUSED' ? ' — сервер не запущен или неверный порт'
+          : err.code === 'ENOTFOUND' ? ' — адрес сервера не найден'
+          : /unsupported protocol version|version/i.test(err.message) ? ' — несовпадение версии бота и сервера'
+          : '';
+        this.activity(`Ошибка соединения: ${err.message}${hint}`, 'bad');
         this.runtime.status = 'error';
         this.runtime.statusText = err.message;
         this.emit(true);
